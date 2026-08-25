@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>새로고침 재고관리</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+:root{
+  --navy:#16233F;
+  --navy-light:#233657;
+  --blue:#3468E0;
+  --blue-soft:#EAF0FE;
+  --bg:#F3F5F8;
+  --card:#FFFFFF;
+  --border:#E3E7EE;
+  --text:#151B2B;
+  --muted:#7A8399;
+  --danger:#E0483B;
+  --green:#1FA37A;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  padding-bottom:90px;
+  -webkit-tap-highlight-color:transparent;
+}
+header{
+  background:var(--navy);
+  color:#fff;
+  padding:22px 18px 26px;
+  border-radius:0 0 22px 22px;
+}
+header .brand{
+  font-size:13px;
+  letter-spacing:.12em;
+  color:#9FB4E8;
+  font-weight:600;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.status-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:#F5A623;
+  transition:background .2s;
+}
+.status-dot.online{background:var(--green);}
+.status-dot.offline{background:var(--danger);}
+header h1{
+  font-size:22px;
+  margin-top:4px;
+  font-weight:700;
+}
+.summary-row{
+  display:flex;
+  gap:10px;
+  margin-top:16px;
+}
+.summary-box{
+  flex:1;
+  background:var(--navy-light);
+  border-radius:12px;
+  padding:12px 14px;
+}
+.summary-box .label{font-size:12px;color:#A9B7D6;}
+.summary-box .value{font-size:17px;font-weight:700;margin-top:4px;}
+
+.search-wrap{
+  padding:16px 16px 0;
+}
+.search-wrap input{
+  width:100%;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:var(--card);
+  font-size:15px;
+  outline:none;
+}
+.search-wrap input:focus{border-color:var(--blue);}
+
+.container{padding:16px;}
+
+.cat-card{
+  background:var(--card);
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  margin-bottom:16px;
+  overflow:hidden;
+}
+.cat-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 16px;
+  border-left:5px solid var(--blue);
+  cursor:pointer;
+}
+.cat-head .cat-title{
+  font-size:16px;
+  font-weight:700;
+}
+.cat-head .cat-count{
+  font-size:12px;
+  color:var(--muted);
+  font-weight:500;
+  margin-top:2px;
+}
+.cat-head-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.chev{
+  transition:transform .2s;
+  color:var(--muted);
+}
+.chev.open{transform:rotate(180deg);}
+.icon-btn{
+  border:none;
+  background:none;
+  color:var(--muted);
+  font-size:18px;
+  padding:6px;
+  line-height:1;
+  cursor:pointer;
+}
+.cat-body{
+  border-top:1px solid var(--border);
+  display:none;
+}
+.cat-body.open{display:block;}
+
+.item-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:13px 16px;
+  border-bottom:1px solid var(--border);
+}
+.item-row:last-child{border-bottom:none;}
+.item-name{
+  font-size:15px;
+  font-weight:600;
+}
+.item-meta{
+  font-size:12.5px;
+  color:var(--muted);
+  margin-top:3px;
+}
+.item-price{
+  font-size:15px;
+  font-weight:700;
+  color:var(--blue);
+  text-align:right;
+  white-space:nowrap;
+}
+.item-left{flex:1;min-width:0;}
+
+.add-item-btn{
+  width:100%;
+  padding:13px;
+  text-align:center;
+  color:var(--blue);
+  font-weight:600;
+  font-size:14px;
+  background:var(--blue-soft);
+  border:none;
+  cursor:pointer;
+}
+
+.empty-cat{
+  padding:24px 16px;
+  text-align:center;
+  color:var(--muted);
+  font-size:13.5px;
+}
+
+.fab-row{
+  position:fixed;
+  bottom:18px;
+  left:16px;
+  right:16px;
+  display:flex;
+  gap:10px;
+  max-width:520px;
+  margin:0 auto;
+}
+.fab{
+  flex:1;
+  padding:15px;
+  border-radius:14px;
+  border:none;
+  font-size:15px;
+  font-weight:700;
+  cursor:pointer;
+}
+.fab.primary{
+  background:var(--blue);
+  color:#fff;
+  box-shadow:0 6px 16px rgba(52,104,224,.35);
+}
+.fab.ghost{
+  background:var(--card);
+  color:var(--navy);
+  border:1px solid var(--border);
+}
+
+.overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(15,20,35,.45);
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  z-index:50;
+}
+.overlay.open{display:flex;}
+.sheet{
+  background:var(--card);
+  width:100%;
+  max-width:520px;
+  border-radius:20px 20px 0 0;
+  padding:20px 18px 26px;
+  max-height:88vh;
+  overflow-y:auto;
+}
+.sheet h2{
+  font-size:17px;
+  margin-bottom:16px;
+}
+.field{margin-bottom:14px;}
+.field label{
+  display:block;
+  font-size:13px;
+  color:var(--muted);
+  margin-bottom:6px;
+  font-weight:600;
+}
+.field input, .field select{
+  width:100%;
+  padding:12px 14px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  font-size:15px;
+  background:#FBFCFE;
+  outline:none;
+}
+.field input:focus, .field select:focus{border-color:var(--blue);}
+.unit-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+}
+.unit-opt{
+  padding:11px 0;
+  text-align:center;
+  border-radius:10px;
+  border:1px solid var(--border);
+  font-size:14px;
+  font-weight:600;
+  color:var(--text);
+  background:#FBFCFE;
+  cursor:pointer;
+}
+.unit-opt.selected{
+  background:var(--blue);
+  border-color:var(--blue);
+  color:#fff;
+}
+.sheet-btns{
+  display:flex;
+  gap:10px;
+  margin-top:18px;
+}
+.sheet-btns button{
+  flex:1;
+  padding:14px;
+  border-radius:12px;
+  border:none;
+  font-size:15px;
+  font-weight:700;
+  cursor:pointer;
+}
+.btn-save{background:var(--blue);color:#fff;}
+.btn-save:disabled{background:#B9C6E6;}
+.btn-delete{background:#FDEDEB;color:var(--danger);}
+.btn-cancel{background:#F1F3F7;color:var(--muted);}
+.hidden{display:none !important;}
+
+.setup-screen{
+  padding:40px 24px;
+  text-align:center;
+}
+.setup-screen h2{font-size:18px;margin-bottom:10px;}
+.setup-screen p{font-size:14px;color:var(--muted);line-height:1.6;}
+</style>
+</head>
+<body>
+
+<div id="setupScreen" class="setup-screen hidden">
+  <h2>파이어베이스 설정이 필요하다</h2>
+  <p>이 파일 맨 아래 firebaseConfig 부분에 본인의 파이어베이스 프로젝트 키를 넣어야 여러 명이 데이터를 공유할 수 있다. 채팅에 안내된 방법대로 설정해라</p>
+</div>
+
+<div id="appRoot" class="hidden">
+
+<header>
+  <div class="brand"><span class="status-dot" id="statusDot"></span> SEROGOCHIM · 실시간 동기화</div>
+  <h1>새로고침 재고관리</h1>
+  <div class="summary-row">
+    <div class="summary-box">
+      <div class="label">전체 품목</div>
+      <div class="value" id="sumItemCount">0개</div>
+    </div>
+    <div class="summary-box">
+      <div class="label">재고 총액</div>
+      <div class="value" id="sumTotalValue">0원</div>
+    </div>
+  </div>
+</header>
+
+<div class="search-wrap">
+  <input type="text" id="searchInput" placeholder="제품명으로 검색">
+</div>
+
+<div class="container" id="catList"></div>
+
+<div class="fab-row">
+  <button class="fab ghost" id="btnAddCategory">+ 분류 추가</button>
+  <button class="fab primary" id="btnAddItemGlobal">+ 상품 추가</button>
+</div>
+
+</div>
+
+<!-- 분류 추가 시트 -->
+<div class="overlay" id="catOverlay">
+  <div class="sheet">
+    <h2>새 분류 추가</h2>
+    <div class="field">
+      <label>분류명</label>
+      <input type="text" id="catNameInput" placeholder="예) 데코타일제품군">
+    </div>
+    <div class="sheet-btns">
+      <button class="btn-cancel" id="catCancelBtn">취소</button>
+      <button class="btn-save" id="catSaveBtn">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- 상품 추가/수정 시트 -->
+<div class="overlay" id="itemOverlay">
+  <div class="sheet">
+    <h2 id="itemSheetTitle">상품 추가</h2>
+    <div class="field">
+      <label>분류</label>
+      <select id="itemCatSelect"></select>
+    </div>
+    <div class="field">
+      <label>제품명</label>
+      <input type="text" id="itemNameInput" placeholder="예) 데코타일1500">
+    </div>
+    <div class="field">
+      <label>수량단위</label>
+      <div class="unit-grid" id="unitGrid">
+        <div class="unit-opt" data-unit="개">개</div>
+        <div class="unit-opt" data-unit="롤">롤</div>
+        <div class="unit-opt" data-unit="박스">박스</div>
+        <div class="unit-opt" data-unit="묶음">묶음</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>수량</label>
+      <input type="number" id="itemQtyInput" placeholder="예) 350" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>가격 (원)</label>
+      <input type="number" id="itemPriceInput" placeholder="예) 30000" inputmode="numeric">
+    </div>
+    <div class="sheet-btns">
+      <button class="btn-cancel" id="itemCancelBtn">취소</button>
+      <button class="btn-save" id="itemSaveBtn">저장</button>
+    </div>
+    <div class="sheet-btns hidden" id="itemDeleteRow">
+      <button class="btn-delete" id="itemDeleteBtn" style="width:100%">이 상품 삭제</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
+  onSnapshot, query, orderBy, writeBatch,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+/* ====================================================================
+   여기에 본인의 파이어베이스 프로젝트 설정값을 채워넣어라.
+   채팅에 안내된 순서대로 파이어베이스 콘솔에서 프로젝트를 만들고
+   웹앱을 등록하면 아래와 똑같이 생긴 값을 받는다.
+==================================================================== */
+const firebaseConfig = {
+  apiKey: "여기에_API_KEY_입력",
+  authDomain: "여기에_PROJECT_ID.firebaseapp.com",
+  projectId: "여기에_PROJECT_ID_입력",
+  storageBucket: "여기에_PROJECT_ID.appspot.com",
+  messagingSenderId: "여기에_SENDER_ID_입력",
+  appId: "여기에_APP_ID_입력"
+};
+/* ==================================================================== */
+
+const isConfigured = !firebaseConfig.apiKey.includes("여기에");
+
+if(!isConfigured){
+  document.getElementById('setupScreen').classList.remove('hidden');
+} else {
+  document.getElementById('appRoot').classList.remove('hidden');
+  runApp();
+}
+
+function runApp(){
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const categoriesCol = collection(db, 'categories');
+const itemsCol = collection(db, 'items');
+
+let categories = [];
+let items = [];
+let openState = {};
+let editingItemId = null;
+let editingItemCatId = null;
+let selectedUnit = '개';
+
+function setStatus(online){
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot ' + (online ? 'online' : 'offline');
+}
+window.addEventListener('online', ()=>setStatus(true));
+window.addEventListener('offline', ()=>setStatus(false));
+setStatus(navigator.onLine);
+
+onSnapshot(query(categoriesCol, orderBy('createdAt','asc')), (snap)=>{
+  categories = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  render();
+}, (err)=>{ console.error(err); });
+
+onSnapshot(query(itemsCol, orderBy('createdAt','asc')), (snap)=>{
+  items = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  render();
+}, (err)=>{ console.error(err); });
+
+function formatWon(n){
+  return Number(n||0).toLocaleString('ko-KR') + '원';
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function render(){
+  const search = document.getElementById('searchInput').value.trim().toLowerCase();
+  const listEl = document.getElementById('catList');
+  listEl.innerHTML = '';
+
+  let totalItems = 0;
+  let totalValue = 0;
+
+  categories.forEach(cat=>{
+    const catItems = items.filter(i=>i.categoryId === cat.id);
+    catItems.forEach(it=>{
+      totalItems += 1;
+      totalValue += (Number(it.qty)||0) * (Number(it.price)||0);
+    });
+
+    const filteredItems = catItems.filter(it => !search || it.name.toLowerCase().includes(search));
+    if(search && filteredItems.length === 0) return;
+
+    const isOpen = openState[cat.id] !== undefined ? openState[cat.id] : true;
+
+    const card = document.createElement('div');
+    card.className = 'cat-card';
+
+    const head = document.createElement('div');
+    head.className = 'cat-head';
+    head.innerHTML = `
+      <div>
+        <div class="cat-title">${escapeHtml(cat.name)}</div>
+        <div class="cat-count">${catItems.length}개 품목</div>
+      </div>
+      <div class="cat-head-right">
+        <button class="icon-btn" data-action="delcat" data-id="${cat.id}">삭제</button>
+        <span class="chev ${isOpen?'open':''}">▾</span>
+      </div>
+    `;
+    head.addEventListener('click', (e)=>{
+      if(e.target.dataset.action === 'delcat') return;
+      openState[cat.id] = !isOpen;
+      render();
+    });
+
+    head.querySelector('[data-action="delcat"]').addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      if(!confirm(cat.name + ' 분류를 삭제할까. 안의 상품도 함께 삭제된다')) return;
+      const batch = writeBatch(db);
+      items.filter(i=>i.categoryId === cat.id).forEach(i=>{
+        batch.delete(doc(db,'items', i.id));
+      });
+      batch.delete(doc(db,'categories', cat.id));
+      await batch.commit();
+    });
+
+    const body = document.createElement('div');
+    body.className = 'cat-body ' + (isOpen || search ? 'open' : '');
+
+    if(filteredItems.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'empty-cat';
+      empty.textContent = '등록된 상품이 없다';
+      body.appendChild(empty);
+    } else {
+      filteredItems.forEach(it=>{
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.innerHTML = `
+          <div class="item-left">
+            <div class="item-name">${escapeHtml(it.name)}</div>
+            <div class="item-meta">${Number(it.qty).toLocaleString('ko-KR')} ${escapeHtml(it.unit)}</div>
+          </div>
+          <div class="item-price">${formatWon(it.price)}</div>
+        `;
+        row.addEventListener('click', ()=> openItemSheet(cat.id, it.id));
+        body.appendChild(row);
+      });
+    }
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-item-btn';
+    addBtn.textContent = '+ ' + cat.name + '에 상품 추가';
+    addBtn.addEventListener('click', ()=> openItemSheet(cat.id, null));
+    body.appendChild(addBtn);
+
+    card.appendChild(head);
+    card.appendChild(body);
+    listEl.appendChild(card);
+  });
+
+  document.getElementById('sumItemCount').textContent = totalItems.toLocaleString('ko-KR') + '개';
+  document.getElementById('sumTotalValue').textContent = formatWon(totalValue);
+}
+
+// 분류 추가
+const catOverlay = document.getElementById('catOverlay');
+document.getElementById('btnAddCategory').addEventListener('click', ()=>{
+  document.getElementById('catNameInput').value = '';
+  catOverlay.classList.add('open');
+});
+document.getElementById('catCancelBtn').addEventListener('click', ()=> catOverlay.classList.remove('open'));
+catOverlay.addEventListener('click', (e)=>{ if(e.target === catOverlay) catOverlay.classList.remove('open'); });
+document.getElementById('catSaveBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('catNameInput').value.trim();
+  if(!name){ alert('분류명을 입력해라'); return; }
+  await addDoc(categoriesCol, { name, createdAt: serverTimestamp() });
+  catOverlay.classList.remove('open');
+});
+
+// 상품 추가/수정
+const itemOverlay = document.getElementById('itemOverlay');
+
+function populateCatSelect(selectedId){
+  const sel = document.getElementById('itemCatSelect');
+  sel.innerHTML = '';
+  categories.forEach(c=>{
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    if(c.id === selectedId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function setUnitSelection(unit){
+  selectedUnit = unit;
+  document.querySelectorAll('.unit-opt').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.unit === unit);
+  });
+}
+
+document.querySelectorAll('.unit-opt').forEach(el=>{
+  el.addEventListener('click', ()=> setUnitSelection(el.dataset.unit));
+});
+
+function openItemSheet(catId, itemId){
+  if(categories.length === 0){
+    alert('먼저 분류를 추가해라');
+    return;
+  }
+  editingItemCatId = catId;
+  editingItemId = itemId;
+
+  populateCatSelect(catId);
+
+  if(itemId){
+    const item = items.find(i=>i.id === itemId);
+    document.getElementById('itemSheetTitle').textContent = '상품 수정';
+    document.getElementById('itemNameInput').value = item.name;
+    document.getElementById('itemQtyInput').value = item.qty;
+    document.getElementById('itemPriceInput').value = item.price;
+    setUnitSelection(item.unit);
+    document.getElementById('itemDeleteRow').classList.remove('hidden');
+  } else {
+    document.getElementById('itemSheetTitle').textContent = '상품 추가';
+    document.getElementById('itemNameInput').value = '';
+    document.getElementById('itemQtyInput').value = '';
+    document.getElementById('itemPriceInput').value = '';
+    setUnitSelection('개');
+    document.getElementById('itemDeleteRow').classList.add('hidden');
+  }
+
+  itemOverlay.classList.add('open');
+}
+
+document.getElementById('btnAddItemGlobal').addEventListener('click', ()=>{
+  const firstCat = categories[0];
+  openItemSheet(firstCat ? firstCat.id : null, null);
+});
+
+document.getElementById('itemCancelBtn').addEventListener('click', ()=> itemOverlay.classList.remove('open'));
+itemOverlay.addEventListener('click', (e)=>{ if(e.target === itemOverlay) itemOverlay.classList.remove('open'); });
+
+document.getElementById('itemSaveBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('itemNameInput').value.trim();
+  const qty = Number(document.getElementById('itemQtyInput').value);
+  const price = Number(document.getElementById('itemPriceInput').value);
+  const catId = document.getElementById('itemCatSelect').value;
+
+  if(!name){ alert('제품명을 입력해라'); return; }
+  if(!qty && qty !== 0){ alert('수량을 입력해라'); return; }
+  if(!price && price !== 0){ alert('가격을 입력해라'); return; }
+
+  const saveBtn = document.getElementById('itemSaveBtn');
+  saveBtn.disabled = true;
+
+  try{
+    if(editingItemId){
+      await updateDoc(doc(db,'items', editingItemId), {
+        name, unit:selectedUnit, qty, price, categoryId:catId
+      });
+    } else {
+      await addDoc(itemsCol, {
+        name, unit:selectedUnit, qty, price, categoryId:catId, createdAt: serverTimestamp()
+      });
+    }
+    itemOverlay.classList.remove('open');
+  } finally {
+    saveBtn.disabled = false;
+  }
+});
+
+document.getElementById('itemDeleteBtn').addEventListener('click', async ()=>{
+  if(!confirm('이 상품을 삭제할까')) return;
+  await deleteDoc(doc(db,'items', editingItemId));
+  itemOverlay.classList.remove('open');
+});
+
+document.getElementById('searchInput').addEventListener('input', render);
+
+}
+</script>
+</body>
+</html>
