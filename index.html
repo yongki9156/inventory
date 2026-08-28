@@ -113,7 +113,27 @@ header h1{
 .cat-head-right{
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:6px;
+}
+.cat-move{
+  display:flex;
+  gap:4px;
+  margin-right:4px;
+}
+.cat-move button{
+  width:24px;
+  height:24px;
+  border:1px solid var(--border);
+  background:#FBFCFE;
+  color:var(--muted);
+  border-radius:6px;
+  font-size:11px;
+  line-height:1;
+  cursor:pointer;
+}
+.cat-move button:disabled{
+  opacity:.35;
+  cursor:default;
 }
 .chev{
   transition:transform .2s;
@@ -329,6 +349,66 @@ header h1{
 }
 .setup-screen h2{font-size:18px;margin-bottom:10px;}
 .setup-screen p{font-size:14px;color:var(--muted);line-height:1.6;}
+
+.log-section{
+  margin:0 16px 16px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  overflow:hidden;
+}
+.log-header{
+  padding:13px 16px;
+  font-size:14px;
+  font-weight:700;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.log-header .log-user-btn{
+  font-size:12px;
+  font-weight:600;
+  color:var(--blue);
+  background:var(--blue-soft);
+  border:none;
+  padding:5px 10px;
+  border-radius:8px;
+  cursor:pointer;
+}
+.log-list{
+  max-height:260px;
+  overflow-y:auto;
+  padding:10px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+}
+.log-empty{
+  text-align:center;
+  color:var(--muted);
+  font-size:13px;
+  padding:14px 0;
+}
+.log-item{
+  font-size:13px;
+  line-height:1.5;
+  color:var(--text);
+  background:var(--bg);
+  border-radius:10px;
+  padding:8px 10px;
+}
+.log-author{
+  font-weight:700;
+  color:var(--navy);
+  margin-right:2px;
+}
+.log-time{
+  display:block;
+  font-size:11px;
+  color:var(--muted);
+  margin-top:2px;
+}
 </style>
 </head>
 <body>
@@ -360,6 +440,14 @@ header h1{
 </div>
 
 <div class="container" id="catList"></div>
+
+<div class="log-section">
+  <div class="log-header">
+    <span>변경 기록</span>
+    <button class="log-user-btn" id="btnChangeUser">이름 변경</button>
+  </div>
+  <div class="log-list" id="logList"></div>
+</div>
 
 <div class="fab-row">
   <button class="fab ghost" id="btnAddCategory">+ 분류 추가</button>
@@ -430,7 +518,7 @@ header h1{
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
   getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
-  onSnapshot, query, orderBy, writeBatch,
+  onSnapshot, query, orderBy, limitToLast, writeBatch,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
@@ -465,13 +553,36 @@ const db = getFirestore(app);
 
 const categoriesCol = collection(db, 'categories');
 const itemsCol = collection(db, 'items');
+const logsCol = collection(db, 'logs');
 
 let categories = [];
 let items = [];
+let logs = [];
 let openState = {};
 let editingItemId = null;
 let editingItemCatId = null;
 let selectedUnit = '개';
+
+function getAuthorName(){
+  let name = localStorage.getItem('serogochim_username');
+  if(!name){
+    name = (prompt('이름을 입력해줘. 변경 기록에 누가 했는지 표시된다') || '').trim() || '직원';
+    localStorage.setItem('serogochim_username', name);
+  }
+  return name;
+}
+
+document.getElementById('btnChangeUser').addEventListener('click', ()=>{
+  const current = localStorage.getItem('serogochim_username') || '';
+  const name = (prompt('표시할 이름을 입력해줘', current) || '').trim();
+  if(name){ localStorage.setItem('serogochim_username', name); }
+});
+
+async function addLog(message){
+  try{
+    await addDoc(logsCol, { message, author:getAuthorName(), createdAt: serverTimestamp() });
+  }catch(e){ console.error(e); }
+}
 
 function setStatus(online){
   const dot = document.getElementById('statusDot');
@@ -481,7 +592,7 @@ window.addEventListener('online', ()=>setStatus(true));
 window.addEventListener('offline', ()=>setStatus(false));
 setStatus(navigator.onLine);
 
-onSnapshot(query(categoriesCol, orderBy('createdAt','asc')), (snap)=>{
+onSnapshot(categoriesCol, (snap)=>{
   categories = snap.docs.map(d=>({ id:d.id, ...d.data() }));
   render();
 }, (err)=>{ console.error(err); });
@@ -491,6 +602,25 @@ onSnapshot(query(itemsCol, orderBy('createdAt','asc')), (snap)=>{
   render();
 }, (err)=>{ console.error(err); });
 
+onSnapshot(query(logsCol, orderBy('createdAt','asc'), limitToLast(60)), (snap)=>{
+  logs = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  renderLogs();
+}, (err)=>{ console.error(err); });
+
+function renderLogs(){
+  const listEl = document.getElementById('logList');
+  if(logs.length === 0){
+    listEl.innerHTML = '<div class="log-empty">아직 변경 기록이 없다</div>';
+    return;
+  }
+  listEl.innerHTML = logs.map(l=>{
+    const t = l.createdAt && l.createdAt.toDate ? l.createdAt.toDate() : null;
+    const timeStr = t ? t.toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '전송중';
+    return `<div class="log-item"><span class="log-author">${escapeHtml(l.author||'직원')}</span>${escapeHtml(l.message||'')}<span class="log-time">${timeStr}</span></div>`;
+  }).join('');
+  listEl.scrollTop = listEl.scrollHeight;
+}
+
 function formatWon(n){
   return Number(n||0).toLocaleString('ko-KR') + '원';
 }
@@ -499,6 +629,22 @@ function escapeHtml(str){
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+async function moveCategory(sortedList, catId, direction){
+  const idx = sortedList.findIndex(c=>c.id === catId);
+  const targetIdx = idx + direction;
+  if(targetIdx < 0 || targetIdx >= sortedList.length) return;
+
+  const current = sortedList[idx];
+  const target = sortedList[targetIdx];
+  const currentOrder = current.order !== undefined ? current.order : idx;
+  const targetOrder = target.order !== undefined ? target.order : targetIdx;
+
+  const batch = writeBatch(db);
+  batch.update(doc(db,'categories', current.id), { order: targetOrder });
+  batch.update(doc(db,'categories', target.id), { order: currentOrder });
+  await batch.commit();
 }
 
 async function moveItem(sortedList, itemId, direction){
@@ -525,7 +671,13 @@ function render(){
   let totalItems = 0;
   let totalValue = 0;
 
-  categories.forEach(cat=>{
+  const sortedCategories = categories.slice().sort((a,b)=>{
+    const oa = a.order !== undefined ? a.order : 0;
+    const ob = b.order !== undefined ? b.order : 0;
+    return oa - ob;
+  });
+
+  sortedCategories.forEach((cat, catIdx)=>{
     const catItems = items.filter(i=>i.categoryId === cat.id);
     catItems.forEach(it=>{
       totalItems += 1;
@@ -553,14 +705,27 @@ function render(){
         <div class="cat-count">${catItems.length}개 품목</div>
       </div>
       <div class="cat-head-right">
+        <div class="cat-move">
+          <button type="button" data-action="catup" ${catIdx===0 || search ? 'disabled' : ''}>▲</button>
+          <button type="button" data-action="catdown" ${catIdx===sortedCategories.length-1 || search ? 'disabled' : ''}>▼</button>
+        </div>
         <button class="icon-btn" data-action="delcat" data-id="${cat.id}">삭제</button>
         <span class="chev ${isOpen?'open':''}">▾</span>
       </div>
     `;
     head.addEventListener('click', (e)=>{
-      if(e.target.dataset.action === 'delcat') return;
+      if(e.target.dataset.action === 'delcat' || e.target.dataset.action === 'catup' || e.target.dataset.action === 'catdown') return;
       openState[cat.id] = !isOpen;
       render();
+    });
+
+    head.querySelector('[data-action="catup"]').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      moveCategory(sortedCategories, cat.id, -1);
+    });
+    head.querySelector('[data-action="catdown"]').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      moveCategory(sortedCategories, cat.id, 1);
     });
 
     head.querySelector('[data-action="delcat"]').addEventListener('click', async (e)=>{
@@ -572,6 +737,7 @@ function render(){
       });
       batch.delete(doc(db,'categories', cat.id));
       await batch.commit();
+      addLog(`"${cat.name}" 분류를 삭제함 (품목 ${catItems.length}개 포함)`);
     });
 
     const body = document.createElement('div');
@@ -638,7 +804,8 @@ catOverlay.addEventListener('click', (e)=>{ if(e.target === catOverlay) catOverl
 document.getElementById('catSaveBtn').addEventListener('click', async ()=>{
   const name = document.getElementById('catNameInput').value.trim();
   if(!name){ alert('분류명을 입력해라'); return; }
-  await addDoc(categoriesCol, { name, createdAt: serverTimestamp() });
+  await addDoc(categoriesCol, { name, order: categories.length, createdAt: serverTimestamp() });
+  addLog(`"${name}" 분류를 추가함`);
   catOverlay.classList.remove('open');
 });
 
@@ -723,16 +890,19 @@ document.getElementById('itemSaveBtn').addEventListener('click', async ()=>{
   saveBtn.disabled = true;
 
   try{
+    const catName = (categories.find(c=>c.id===catId) || {}).name || '';
     if(editingItemId){
       await updateDoc(doc(db,'items', editingItemId), {
         location, name, unit:selectedUnit, qty, price, categoryId:catId
       });
+      addLog(`"${name}" 상품 정보를 수정함 (${catName})`);
     } else {
       const catItemCount = items.filter(i=>i.categoryId === catId).length;
       await addDoc(itemsCol, {
         location, name, unit:selectedUnit, qty, price, categoryId:catId,
         order: catItemCount, createdAt: serverTimestamp()
       });
+      addLog(`"${name}" 상품을 추가함 (${catName})`);
     }
     itemOverlay.classList.remove('open');
   } finally {
@@ -742,7 +912,9 @@ document.getElementById('itemSaveBtn').addEventListener('click', async ()=>{
 
 document.getElementById('itemDeleteBtn').addEventListener('click', async ()=>{
   if(!confirm('이 상품을 삭제할까')) return;
+  const item = items.find(i=>i.id === editingItemId);
   await deleteDoc(doc(db,'items', editingItemId));
+  if(item){ addLog(`"${item.name}" 상품을 삭제함`); }
   itemOverlay.classList.remove('open');
 });
 
