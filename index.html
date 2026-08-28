@@ -787,7 +787,7 @@ document.getElementById('catCancelBtn').addEventListener('click', ()=> catOverla
 catOverlay.addEventListener('click', (e)=>{ if(e.target === catOverlay) catOverlay.classList.remove('open'); });
 document.getElementById('catSaveBtn').addEventListener('click', async ()=>{
   const name = document.getElementById('catNameInput').value.trim();
-  if(!name){ alert('분류명을 입력해라'); return; }
+  if(!name){ alert('분류명을 입력해주세요'); return; }
   await addDoc(categoriesCol, { name, order: categories.length, createdAt: serverTimestamp() });
   addLog(`[분류 추가] "${name}"`);
   catOverlay.classList.remove('open');
