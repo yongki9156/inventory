@@ -444,7 +444,6 @@ header h1{
 <div class="log-section">
   <div class="log-header">
     <span>변경 기록</span>
-    <button class="log-user-btn" id="btnChangeUser">이름 변경</button>
   </div>
   <div class="log-list" id="logList"></div>
 </div>
@@ -563,24 +562,9 @@ let editingItemId = null;
 let editingItemCatId = null;
 let selectedUnit = '개';
 
-function getAuthorName(){
-  let name = localStorage.getItem('serogochim_username');
-  if(!name){
-    name = (prompt('이름을 입력해줘. 변경 기록에 누가 했는지 표시된다') || '').trim() || '직원';
-    localStorage.setItem('serogochim_username', name);
-  }
-  return name;
-}
-
-document.getElementById('btnChangeUser').addEventListener('click', ()=>{
-  const current = localStorage.getItem('serogochim_username') || '';
-  const name = (prompt('표시할 이름을 입력해줘', current) || '').trim();
-  if(name){ localStorage.setItem('serogochim_username', name); }
-});
-
 async function addLog(message){
   try{
-    await addDoc(logsCol, { message, author:getAuthorName(), createdAt: serverTimestamp() });
+    await addDoc(logsCol, { message, createdAt: serverTimestamp() });
   }catch(e){ console.error(e); }
 }
 
@@ -616,7 +600,7 @@ function renderLogs(){
   listEl.innerHTML = logs.map(l=>{
     const t = l.createdAt && l.createdAt.toDate ? l.createdAt.toDate() : null;
     const timeStr = t ? t.toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '전송중';
-    return `<div class="log-item"><span class="log-author">${escapeHtml(l.author||'직원')}</span>${escapeHtml(l.message||'')}<span class="log-time">${timeStr}</span></div>`;
+    return `<div class="log-item">${escapeHtml(l.message||'')}<span class="log-time">${timeStr}</span></div>`;
   }).join('');
   listEl.scrollTop = listEl.scrollHeight;
 }
@@ -737,7 +721,7 @@ function render(){
       });
       batch.delete(doc(db,'categories', cat.id));
       await batch.commit();
-      addLog(`"${cat.name}" 분류를 삭제함 (품목 ${catItems.length}개 포함)`);
+      addLog(`[분류 삭제] "${cat.name}" (포함된 품목 ${catItems.length}개도 함께 삭제됨)`);
     });
 
     const body = document.createElement('div');
@@ -805,7 +789,7 @@ document.getElementById('catSaveBtn').addEventListener('click', async ()=>{
   const name = document.getElementById('catNameInput').value.trim();
   if(!name){ alert('분류명을 입력해라'); return; }
   await addDoc(categoriesCol, { name, order: categories.length, createdAt: serverTimestamp() });
-  addLog(`"${name}" 분류를 추가함`);
+  addLog(`[분류 추가] "${name}"`);
   catOverlay.classList.remove('open');
 });
 
@@ -892,17 +876,40 @@ document.getElementById('itemSaveBtn').addEventListener('click', async ()=>{
   try{
     const catName = (categories.find(c=>c.id===catId) || {}).name || '';
     if(editingItemId){
+      const oldItem = items.find(i=>i.id === editingItemId) || {};
       await updateDoc(doc(db,'items', editingItemId), {
         location, name, unit:selectedUnit, qty, price, categoryId:catId
       });
-      addLog(`"${name}" 상품 정보를 수정함 (${catName})`);
+
+      const diffParts = [];
+      if(oldItem.name !== name){
+        diffParts.push(`제품명 "${oldItem.name}" → "${name}"`);
+      }
+      if(Number(oldItem.qty) !== qty || oldItem.unit !== selectedUnit){
+        diffParts.push(`수량 ${Number(oldItem.qty||0).toLocaleString('ko-KR')}${oldItem.unit||''} → ${qty.toLocaleString('ko-KR')}${selectedUnit}`);
+      }
+      if(Number(oldItem.price) !== price){
+        diffParts.push(`가격 ${formatWon(oldItem.price)} → ${formatWon(price)}`);
+      }
+      if((oldItem.location||'') !== location){
+        diffParts.push(`위치 "${oldItem.location||'없음'}" → "${location||'없음'}"`);
+      }
+      if(oldItem.categoryId !== catId){
+        const oldCatName = (categories.find(c=>c.id===oldItem.categoryId) || {}).name || '알수없음';
+        diffParts.push(`분류 "${oldCatName}" → "${catName}"`);
+      }
+
+      if(diffParts.length > 0){
+        addLog(`[상품 수정] "${name}" : ${diffParts.join(' · ')}`);
+      }
     } else {
       const catItemCount = items.filter(i=>i.categoryId === catId).length;
       await addDoc(itemsCol, {
         location, name, unit:selectedUnit, qty, price, categoryId:catId,
         order: catItemCount, createdAt: serverTimestamp()
       });
-      addLog(`"${name}" 상품을 추가함 (${catName})`);
+      const locPart = location ? ` · 위치 ${location}` : '';
+      addLog(`[상품 추가] "${name}" (${catName} · ${qty.toLocaleString('ko-KR')}${selectedUnit} · ${formatWon(price)}${locPart})`);
     }
     itemOverlay.classList.remove('open');
   } finally {
@@ -914,7 +921,10 @@ document.getElementById('itemDeleteBtn').addEventListener('click', async ()=>{
   if(!confirm('이 상품을 삭제할까')) return;
   const item = items.find(i=>i.id === editingItemId);
   await deleteDoc(doc(db,'items', editingItemId));
-  if(item){ addLog(`"${item.name}" 상품을 삭제함`); }
+  if(item){
+    const catName = (categories.find(c=>c.id===item.categoryId) || {}).name || '';
+    addLog(`[상품 삭제] "${item.name}" (${catName} · ${Number(item.qty||0).toLocaleString('ko-KR')}${item.unit||''} · ${formatWon(item.price)})`);
+  }
   itemOverlay.classList.remove('open');
 });
 
