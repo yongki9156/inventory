@@ -203,9 +203,9 @@ header h1{
   color:var(--muted);
   margin-top:3px;
 }
-.item-price{
-  font-size:15px;
-  font-weight:700;
+.item-qty-big{
+  font-size:17px;
+  font-weight:800;
   color:var(--blue);
   text-align:right;
   white-space:nowrap;
@@ -924,9 +924,9 @@ function render(){
           <div class="item-left">
             ${locationHtml}
             <div class="item-name">${escapeHtml(it.name)}</div>
-            <div class="item-meta">${Number(it.qty).toLocaleString('ko-KR')} ${escapeHtml(it.unit)}</div>
+            <div class="item-meta">${formatWon(it.price)}</div>
           </div>
-          <div class="item-price">${formatWon(it.price)}</div>
+          <div class="item-qty-big">${Number(it.qty).toLocaleString('ko-KR')}${escapeHtml(it.unit)}</div>
         `;
         row.querySelector('[data-action="up"]').addEventListener('click', (e)=>{
           e.stopPropagation();
