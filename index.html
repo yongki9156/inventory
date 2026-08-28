@@ -25,90 +25,90 @@ body{
   font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;
   background:var(--bg);
   color:var(--text);
-  padding-bottom:90px;
+  padding-bottom:78px;
   -webkit-tap-highlight-color:transparent;
 }
 header{
   background:var(--navy);
   color:#fff;
-  padding:22px 18px 26px;
-  border-radius:0 0 22px 22px;
+  padding:16px 16px 18px;
+  border-radius:0 0 18px 18px;
 }
 header .brand{
-  font-size:13px;
-  letter-spacing:.12em;
+  font-size:11.5px;
+  letter-spacing:.1em;
   color:#9FB4E8;
   font-weight:600;
   display:flex;
   align-items:center;
-  gap:8px;
+  gap:6px;
 }
 .status-dot{
-  width:8px;height:8px;border-radius:50%;
+  width:7px;height:7px;border-radius:50%;
   background:#F5A623;
   transition:background .2s;
 }
 .status-dot.online{background:var(--green);}
 .status-dot.offline{background:var(--danger);}
 header h1{
-  font-size:22px;
-  margin-top:4px;
+  font-size:18.5px;
+  margin-top:3px;
   font-weight:700;
 }
 .summary-row{
   display:flex;
-  gap:10px;
-  margin-top:16px;
+  gap:8px;
+  margin-top:11px;
 }
 .summary-box{
   flex:1;
   background:var(--navy-light);
-  border-radius:12px;
-  padding:12px 14px;
+  border-radius:10px;
+  padding:8px 11px;
 }
-.summary-box .label{font-size:12px;color:#A9B7D6;}
-.summary-box .value{font-size:17px;font-weight:700;margin-top:4px;}
+.summary-box .label{font-size:10.5px;color:#A9B7D6;}
+.summary-box .value{font-size:14.5px;font-weight:700;margin-top:2px;}
 
 .search-wrap{
-  padding:16px 16px 0;
+  padding:12px 12px 0;
 }
 .search-wrap input{
   width:100%;
-  padding:12px 14px;
-  border-radius:12px;
+  padding:9px 12px;
+  border-radius:10px;
   border:1px solid var(--border);
   background:var(--card);
-  font-size:15px;
+  font-size:13.5px;
   outline:none;
 }
 .search-wrap input:focus{border-color:var(--blue);}
 
-.container{padding:16px;}
+.container{padding:12px;}
 
 .cat-card{
   background:var(--card);
-  border-radius:var(--radius);
+  border-radius:12px;
   border:1px solid var(--border);
-  margin-bottom:16px;
+  margin-bottom:10px;
   overflow:hidden;
 }
 .cat-head{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:14px 16px;
-  border-left:5px solid var(--blue);
+  padding:10px 12px;
+  border-left:4px solid var(--blue);
   cursor:pointer;
 }
 .cat-head .cat-title{
-  font-size:16px;
+  font-size:14.5px;
   font-weight:700;
 }
 .cat-head .cat-count{
-  font-size:12px;
+  font-size:11px;
   color:var(--muted);
   font-weight:500;
-  margin-top:2px;
+  margin-top:1px;
 }
 .cat-head-right{
   display:flex;
@@ -159,9 +159,9 @@ header h1{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  padding:13px 16px;
+  padding:8px 12px;
   border-bottom:1px solid var(--border);
-  gap:10px;
+  gap:8px;
 }
 .item-row:last-child{border-bottom:none;}
 .item-move{
@@ -170,13 +170,13 @@ header h1{
   gap:2px;
 }
 .item-move button{
-  width:26px;
-  height:22px;
+  width:22px;
+  height:18px;
   border:1px solid var(--border);
   background:#FBFCFE;
   color:var(--muted);
-  border-radius:6px;
-  font-size:11px;
+  border-radius:5px;
+  font-size:10px;
   line-height:1;
   cursor:pointer;
 }
@@ -186,25 +186,25 @@ header h1{
 }
 .item-location{
   display:inline-block;
-  font-size:11px;
+  font-size:10px;
   font-weight:700;
   color:var(--blue);
   background:var(--blue-soft);
-  padding:2px 7px;
-  border-radius:6px;
-  margin-bottom:4px;
+  padding:1px 6px;
+  border-radius:5px;
+  margin-bottom:3px;
 }
 .item-name{
-  font-size:15px;
+  font-size:13.5px;
   font-weight:600;
 }
 .item-meta{
-  font-size:12.5px;
+  font-size:11px;
   color:var(--muted);
-  margin-top:3px;
+  margin-top:2px;
 }
 .item-qty-big{
-  font-size:17px;
+  font-size:15px;
   font-weight:800;
   color:var(--blue);
   text-align:right;
@@ -214,39 +214,39 @@ header h1{
 
 .add-item-btn{
   width:100%;
-  padding:13px;
+  padding:10px;
   text-align:center;
   color:var(--blue);
   font-weight:600;
-  font-size:14px;
+  font-size:12.5px;
   background:var(--blue-soft);
   border:none;
   cursor:pointer;
 }
 
 .empty-cat{
-  padding:24px 16px;
+  padding:18px 12px;
   text-align:center;
   color:var(--muted);
-  font-size:13.5px;
+  font-size:12.5px;
 }
 
 .fab-row{
   position:fixed;
-  bottom:18px;
-  left:16px;
-  right:16px;
+  bottom:14px;
+  left:12px;
+  right:12px;
   display:flex;
-  gap:10px;
+  gap:8px;
   max-width:520px;
   margin:0 auto;
 }
 .fab{
   flex:1;
-  padding:15px;
-  border-radius:14px;
+  padding:12px;
+  border-radius:12px;
   border:none;
-  font-size:15px;
+  font-size:13.5px;
   font-weight:700;
   cursor:pointer;
 }
@@ -351,15 +351,15 @@ header h1{
 .setup-screen p{font-size:14px;color:var(--muted);line-height:1.6;}
 
 .log-section{
-  margin:0 16px 16px;
+  margin:0 12px 12px;
   background:var(--card);
   border:1px solid var(--border);
-  border-radius:var(--radius);
+  border-radius:12px;
   overflow:hidden;
 }
 .log-header{
-  padding:13px 16px;
-  font-size:14px;
+  padding:10px 12px;
+  font-size:12.5px;
   font-weight:700;
   border-bottom:1px solid var(--border);
   display:flex;
@@ -367,36 +367,36 @@ header h1{
   align-items:center;
 }
 .log-header .log-user-btn{
-  font-size:12px;
+  font-size:11px;
   font-weight:600;
   color:var(--blue);
   background:var(--blue-soft);
   border:none;
-  padding:5px 10px;
-  border-radius:8px;
+  padding:4px 8px;
+  border-radius:7px;
   cursor:pointer;
 }
 .log-list{
-  max-height:260px;
+  max-height:220px;
   overflow-y:auto;
-  padding:10px 14px;
+  padding:8px 10px;
   display:flex;
   flex-direction:column;
-  gap:9px;
+  gap:6px;
 }
 .log-empty{
   text-align:center;
   color:var(--muted);
-  font-size:13px;
-  padding:14px 0;
+  font-size:12px;
+  padding:12px 0;
 }
 .log-item{
-  font-size:13px;
-  line-height:1.5;
+  font-size:11.5px;
+  line-height:1.4;
   color:var(--text);
   background:var(--bg);
-  border-radius:10px;
-  padding:8px 10px;
+  border-radius:8px;
+  padding:6px 8px;
 }
 .log-author{
   font-weight:700;
@@ -405,7 +405,7 @@ header h1{
 }
 .log-time{
   display:block;
-  font-size:11px;
+  font-size:10px;
   color:var(--muted);
   margin-top:2px;
 }
@@ -810,17 +810,58 @@ async function moveCategory(sortedList, catId, direction){
   await batch.commit();
 }
 
+function sortCategoryItems(catItemsList){
+  const hasOrder = catItemsList.some(i=>i.order !== undefined);
+  if(!hasOrder){
+    return catItemsList.slice().sort((a,b)=> a.name.localeCompare(b.name, 'ko'));
+  }
+  return catItemsList.slice().sort((a,b)=>{
+    const oa = a.order !== undefined ? a.order : Infinity;
+    const ob = b.order !== undefined ? b.order : Infinity;
+    if(oa !== ob) return oa - ob;
+    return a.name.localeCompare(b.name, 'ko');
+  });
+}
+
+function computeInsertOrder(catItemsList, name){
+  const hasOrder = catItemsList.some(i=>i.order !== undefined);
+  if(!hasOrder) return undefined;
+
+  const sorted = sortCategoryItems(catItemsList);
+  let insertIdx = sorted.findIndex(i => name.localeCompare(i.name, 'ko') < 0);
+  if(insertIdx === -1) insertIdx = sorted.length;
+
+  const prev = insertIdx > 0 ? sorted[insertIdx-1] : null;
+  const next = insertIdx < sorted.length ? sorted[insertIdx] : null;
+  const prevOrder = prev ? (prev.order !== undefined ? prev.order : insertIdx-1) : null;
+  const nextOrder = next ? (next.order !== undefined ? next.order : insertIdx) : null;
+
+  if(prevOrder === null && nextOrder === null) return 0;
+  if(prevOrder === null) return nextOrder - 1;
+  if(nextOrder === null) return prevOrder + 1;
+  return (prevOrder + nextOrder) / 2;
+}
+
 async function moveItem(sortedList, itemId, direction){
   const idx = sortedList.findIndex(i=>i.id === itemId);
   const targetIdx = idx + direction;
   if(targetIdx < 0 || targetIdx >= sortedList.length) return;
 
+  const batch = writeBatch(db);
+
+  // 이 분류에서 처음으로 순서를 바꾸는 경우, 지금 보이는 가나다순 그대로를 고정값으로 저장해둔다
+  sortedList.forEach((it, i)=>{
+    if(it.order === undefined){
+      batch.update(doc(db,'items', it.id), { order: i });
+      it.order = i;
+    }
+  });
+
   const current = sortedList[idx];
   const target = sortedList[targetIdx];
-  const currentOrder = current.order !== undefined ? current.order : idx;
-  const targetOrder = target.order !== undefined ? target.order : targetIdx;
+  const currentOrder = current.order;
+  const targetOrder = target.order;
 
-  const batch = writeBatch(db);
   batch.update(doc(db,'items', current.id), { order: targetOrder });
   batch.update(doc(db,'items', target.id), { order: currentOrder });
   await batch.commit();
@@ -847,11 +888,7 @@ function render(){
       totalValue += (Number(it.qty)||0) * (Number(it.price)||0);
     });
 
-    const sortedCatItems = catItems.slice().sort((a,b)=>{
-      const oa = a.order !== undefined ? a.order : 0;
-      const ob = b.order !== undefined ? b.order : 0;
-      return oa - ob;
-    });
+    const sortedCatItems = sortCategoryItems(catItems);
     const filteredItems = sortedCatItems.filter(it => !search || it.name.toLowerCase().includes(search));
     if(search && filteredItems.length === 0) return;
 
@@ -1056,9 +1093,13 @@ document.getElementById('itemSaveBtn').addEventListener('click', async ()=>{
     const catName = (categories.find(c=>c.id===catId) || {}).name || '';
     if(editingItemId){
       const oldItem = items.find(i=>i.id === editingItemId) || {};
-      await updateDoc(doc(db,'items', editingItemId), {
-        location, name, unit:selectedUnit, qty, price, categoryId:catId
-      });
+      const updatePayload = { location, name, unit:selectedUnit, qty, price, categoryId:catId };
+      if(oldItem.order === undefined){
+        const siblingItems = items.filter(i=>i.categoryId === catId && i.id !== editingItemId);
+        const insertOrder = computeInsertOrder(siblingItems, name);
+        if(insertOrder !== undefined) updatePayload.order = insertOrder;
+      }
+      await updateDoc(doc(db,'items', editingItemId), updatePayload);
 
       const diffParts = [];
       if(oldItem.name !== name){
@@ -1082,11 +1123,13 @@ document.getElementById('itemSaveBtn').addEventListener('click', async ()=>{
         addLog(`[상품 수정] "${name}" : ${diffParts.join(' · ')}`);
       }
     } else {
-      const catItemCount = items.filter(i=>i.categoryId === catId).length;
-      await addDoc(itemsCol, {
-        location, name, unit:selectedUnit, qty, price, categoryId:catId,
-        order: catItemCount, createdAt: serverTimestamp()
-      });
+      const siblingItems = items.filter(i=>i.categoryId === catId);
+      const insertOrder = computeInsertOrder(siblingItems, name);
+      const newPayload = {
+        location, name, unit:selectedUnit, qty, price, categoryId:catId, createdAt: serverTimestamp()
+      };
+      if(insertOrder !== undefined) newPayload.order = insertOrder;
+      await addDoc(itemsCol, newPayload);
       const locPart = location ? ` · 위치 ${location}` : '';
       addLog(`[상품 추가] "${name}" (${catName} · ${qty.toLocaleString('ko-KR')}${selectedUnit} · ${formatWon(price)}${locPart})`);
     }
@@ -1243,14 +1286,17 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
 
   try{
     const batch = writeBatch(db);
-    let orderCounter = items.filter(i=>i.categoryId === catId).length;
+    const workingItems = items.filter(i=>i.categoryId === catId).slice();
     validRows.forEach(r=>{
       const ref = doc(itemsCol);
-      batch.set(ref, {
+      const insertOrder = computeInsertOrder(workingItems, r.name);
+      const payload = {
         location: r.location, name: r.name, unit: r.unit, qty: r.qty, price: r.price,
-        categoryId: catId, order: orderCounter, createdAt: serverTimestamp()
-      });
-      orderCounter += 1;
+        categoryId: catId, createdAt: serverTimestamp()
+      };
+      if(insertOrder !== undefined) payload.order = insertOrder;
+      batch.set(ref, payload);
+      workingItems.push({ name: r.name, order: insertOrder });
     });
     await batch.commit();
 
