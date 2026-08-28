@@ -409,6 +409,117 @@ header h1{
   color:var(--muted);
   margin-top:2px;
 }
+
+.bulk-open-btn{
+  display:block;
+  width:calc(100% - 32px);
+  margin:10px 16px 0;
+  padding:12px;
+  border-radius:12px;
+  border:1.5px dashed var(--blue);
+  background:transparent;
+  color:var(--blue);
+  font-weight:700;
+  font-size:13.5px;
+  cursor:pointer;
+}
+
+.bulk-tool{
+  background:var(--bg);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:12px;
+  margin-bottom:14px;
+}
+.bulk-tool-title{
+  font-size:13px;
+  font-weight:700;
+  margin-bottom:10px;
+}
+.bulk-hint{
+  font-size:11.5px;
+  color:var(--muted);
+  margin-bottom:8px;
+  line-height:1.5;
+}
+.bulk-tool textarea{
+  width:100%;
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:10px;
+  font-size:13px;
+  background:#FBFCFE;
+  resize:vertical;
+  margin-bottom:8px;
+  font-family:inherit;
+}
+.btn-block{
+  width:100%;
+  padding:11px;
+  border-radius:8px;
+  border:none;
+  background:var(--blue-soft);
+  color:var(--blue);
+  font-weight:700;
+  font-size:13.5px;
+  cursor:pointer;
+}
+.bulk-table-wrap{
+  overflow-x:auto;
+  border:1px solid var(--border);
+  border-radius:10px;
+  margin-top:4px;
+}
+.bulk-table-inner{
+  min-width:600px;
+}
+.bulk-table-head, .bulk-row{
+  display:grid;
+  grid-template-columns:90px 1fr 66px 66px 90px 30px;
+  gap:6px;
+  padding:7px 8px;
+  align-items:center;
+}
+.bulk-table-head{
+  font-size:11px;
+  color:var(--muted);
+  font-weight:700;
+  border-bottom:1px solid var(--border);
+  background:var(--bg);
+}
+.bulk-row{
+  border-bottom:1px solid var(--border);
+}
+.bulk-row:last-child{border-bottom:none;}
+.bulk-row input, .bulk-row select{
+  width:100%;
+  padding:7px 6px;
+  font-size:12.5px;
+  border:1px solid var(--border);
+  border-radius:6px;
+  background:#FBFCFE;
+}
+.row-del{
+  border:none;
+  background:none;
+  color:var(--danger);
+  font-size:17px;
+  font-weight:700;
+  cursor:pointer;
+}
+.bulk-addrow-btn{
+  width:100%;
+  padding:11px;
+  text-align:center;
+  color:var(--blue);
+  font-weight:600;
+  font-size:13.5px;
+  background:var(--blue-soft);
+  border:none;
+  border-radius:8px;
+  margin-top:8px;
+  cursor:pointer;
+}
 </style>
 </head>
 <body>
@@ -437,6 +548,7 @@ header h1{
 
 <div class="search-wrap">
   <input type="text" id="searchInput" placeholder="제품명으로 검색">
+  <button class="bulk-open-btn" id="btnBulkAdd">+ 여러 상품 한번에 등록 (엑셀 스타일)</button>
 </div>
 
 <div class="container" id="catList"></div>
@@ -509,6 +621,73 @@ header h1{
     </div>
     <div class="sheet-btns hidden" id="itemDeleteRow">
       <button class="btn-delete" id="itemDeleteBtn" style="width:100%">이 상품 삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- 여러 상품 한번에 등록 -->
+<div class="overlay" id="bulkOverlay">
+  <div class="sheet">
+    <h2>여러 상품 한번에 등록</h2>
+    <div class="field">
+      <label>분류</label>
+      <select id="bulkCatSelect"></select>
+    </div>
+
+    <div class="bulk-tool">
+      <div class="bulk-tool-title">빠른 생성 (예: 데코타일 1500, 2000, 3000)</div>
+      <div class="field">
+        <label>제품명 접두사</label>
+        <input type="text" id="bulkPrefixInput" placeholder="예) 데코타일">
+      </div>
+      <div class="field">
+        <label>변형 목록 (콤마로 구분)</label>
+        <input type="text" id="bulkVariantsInput" placeholder="예) 1500, 2000, 3000">
+      </div>
+      <div class="field">
+        <label>공통 수량단위</label>
+        <select id="bulkUnitSelect">
+          <option value="개">개</option>
+          <option value="롤">롤</option>
+          <option value="박스">박스</option>
+          <option value="묶음">묶음</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>공통 수량</label>
+        <input type="number" id="bulkQtyInput" placeholder="예) 350" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label>공통 가격</label>
+        <input type="number" id="bulkPriceInput" placeholder="예) 30000" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label>공통 위치 (선택)</label>
+        <input type="text" id="bulkLocationInput" placeholder="예) 창고 2층">
+      </div>
+      <button type="button" class="btn-block" id="bulkGenerateBtn">표에 추가</button>
+    </div>
+
+    <div class="bulk-tool">
+      <div class="bulk-tool-title">엑셀에서 복사해서 붙여넣기</div>
+      <div class="bulk-hint">한 줄에 위치, 제품명, 수량단위, 수량, 가격 순서로 탭이나 콤마로 구분해서 붙여넣어주세요. 위치는 비워둬도 된다</div>
+      <textarea id="bulkPasteArea" rows="4" placeholder="A구역	데코타일1500	박스	350	30000"></textarea>
+      <button type="button" class="btn-block" id="bulkPasteBtn">표에 추가</button>
+    </div>
+
+    <div class="bulk-table-wrap">
+      <div class="bulk-table-inner">
+        <div class="bulk-table-head">
+          <span>위치</span><span>제품명</span><span>단위</span><span>수량</span><span>가격</span><span></span>
+        </div>
+        <div id="bulkTableBody"></div>
+      </div>
+    </div>
+    <button type="button" class="bulk-addrow-btn" id="bulkAddRowBtn">+ 빈 행 추가</button>
+
+    <div class="sheet-btns">
+      <button class="btn-cancel" id="bulkCancelBtn">취소</button>
+      <button class="btn-save" id="bulkSaveBtn">전체 저장</button>
     </div>
   </div>
 </div>
@@ -929,6 +1108,160 @@ document.getElementById('itemDeleteBtn').addEventListener('click', async ()=>{
 });
 
 document.getElementById('searchInput').addEventListener('input', render);
+
+// 여러 상품 한번에 등록
+const bulkOverlay = document.getElementById('bulkOverlay');
+const bulkTableBody = document.getElementById('bulkTableBody');
+
+function populateBulkCatSelect(){
+  const sel = document.getElementById('bulkCatSelect');
+  sel.innerHTML = '';
+  categories.forEach(c=>{
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    sel.appendChild(opt);
+  });
+}
+
+function bulkAddRow(data){
+  data = data || {};
+  const row = document.createElement('div');
+  row.className = 'bulk-row';
+  row.innerHTML = `
+    <input type="text" class="b-loc" value="${escapeHtml(data.location||'')}">
+    <input type="text" class="b-name" value="${escapeHtml(data.name||'')}">
+    <select class="b-unit">
+      <option value="개">개</option>
+      <option value="롤">롤</option>
+      <option value="박스">박스</option>
+      <option value="묶음">묶음</option>
+    </select>
+    <input type="number" class="b-qty" inputmode="numeric" value="${data.qty!==undefined && data.qty!=='' ? data.qty : ''}">
+    <input type="number" class="b-price" inputmode="numeric" value="${data.price!==undefined && data.price!=='' ? data.price : ''}">
+    <button type="button" class="row-del">×</button>
+  `;
+  row.querySelector('.b-unit').value = data.unit || '개';
+  row.querySelector('.row-del').addEventListener('click', ()=> row.remove());
+  bulkTableBody.appendChild(row);
+}
+
+document.getElementById('btnBulkAdd').addEventListener('click', ()=>{
+  if(categories.length === 0){
+    alert('먼저 분류를 추가해주세요');
+    return;
+  }
+  populateBulkCatSelect();
+  bulkTableBody.innerHTML = '';
+  document.getElementById('bulkPrefixInput').value = '';
+  document.getElementById('bulkVariantsInput').value = '';
+  document.getElementById('bulkQtyInput').value = '';
+  document.getElementById('bulkPriceInput').value = '';
+  document.getElementById('bulkLocationInput').value = '';
+  document.getElementById('bulkPasteArea').value = '';
+  bulkAddRow();
+  bulkOverlay.classList.add('open');
+});
+
+document.getElementById('bulkCancelBtn').addEventListener('click', ()=> bulkOverlay.classList.remove('open'));
+bulkOverlay.addEventListener('click', (e)=>{ if(e.target === bulkOverlay) bulkOverlay.classList.remove('open'); });
+
+document.getElementById('bulkAddRowBtn').addEventListener('click', ()=> bulkAddRow());
+
+document.getElementById('bulkGenerateBtn').addEventListener('click', ()=>{
+  const prefix = document.getElementById('bulkPrefixInput').value.trim();
+  const variants = document.getElementById('bulkVariantsInput').value.split(',').map(s=>s.trim()).filter(Boolean);
+  if(variants.length === 0){ alert('변형 목록을 입력해주세요'); return; }
+  const unit = document.getElementById('bulkUnitSelect').value;
+  const qty = document.getElementById('bulkQtyInput').value;
+  const price = document.getElementById('bulkPriceInput').value;
+  const location = document.getElementById('bulkLocationInput').value.trim();
+
+  variants.forEach(v=>{
+    const name = prefix ? `${prefix} ${v}` : v;
+    bulkAddRow({ location, name, unit, qty, price });
+  });
+
+  document.getElementById('bulkVariantsInput').value = '';
+});
+
+document.getElementById('bulkPasteBtn').addEventListener('click', ()=>{
+  const raw = document.getElementById('bulkPasteArea').value;
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  if(lines.length === 0){ alert('붙여넣을 내용이 없어요'); return; }
+
+  lines.forEach(line=>{
+    const parts = line.includes('\t') ? line.split('\t') : line.split(',');
+    const cleaned = parts.map(p=>p.trim());
+    bulkAddRow({
+      location: cleaned[0] || '',
+      name: cleaned[1] || '',
+      unit: cleaned[2] || '개',
+      qty: cleaned[3] || '',
+      price: cleaned[4] || ''
+    });
+  });
+
+  document.getElementById('bulkPasteArea').value = '';
+});
+
+document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
+  const catId = document.getElementById('bulkCatSelect').value;
+  const catName = (categories.find(c=>c.id===catId) || {}).name || '';
+  const rows = Array.from(bulkTableBody.querySelectorAll('.bulk-row'));
+
+  const validRows = [];
+  let hasInvalid = false;
+
+  rows.forEach(row=>{
+    const name = row.querySelector('.b-name').value.trim();
+    const location = row.querySelector('.b-loc').value.trim();
+    const unit = row.querySelector('.b-unit').value;
+    const qty = Number(row.querySelector('.b-qty').value);
+    const price = Number(row.querySelector('.b-price').value);
+
+    if(!name && !row.querySelector('.b-qty').value && !row.querySelector('.b-price').value) return;
+
+    if(!name || row.querySelector('.b-qty').value === '' || row.querySelector('.b-price').value === ''){
+      hasInvalid = true;
+      return;
+    }
+    validRows.push({ location, name, unit, qty, price });
+  });
+
+  if(hasInvalid){
+    alert('제품명, 수량, 가격이 빠진 행이 있어요. 확인해주세요');
+    return;
+  }
+  if(validRows.length === 0){
+    alert('등록할 상품이 없어요');
+    return;
+  }
+
+  const saveBtn = document.getElementById('bulkSaveBtn');
+  saveBtn.disabled = true;
+
+  try{
+    const batch = writeBatch(db);
+    let orderCounter = items.filter(i=>i.categoryId === catId).length;
+    validRows.forEach(r=>{
+      const ref = doc(itemsCol);
+      batch.set(ref, {
+        location: r.location, name: r.name, unit: r.unit, qty: r.qty, price: r.price,
+        categoryId: catId, order: orderCounter, createdAt: serverTimestamp()
+      });
+      orderCounter += 1;
+    });
+    await batch.commit();
+
+    const nameList = validRows.map(r=>r.name).join(', ');
+    addLog(`[일괄 등록] "${catName}"에 ${validRows.length}개 상품 추가됨: ${nameList}`);
+
+    bulkOverlay.classList.remove('open');
+  } finally {
+    saveBtn.disabled = false;
+  }
+});
 
 }
 </script>
