@@ -141,8 +141,39 @@ header h1{
   align-items:center;
   padding:13px 16px;
   border-bottom:1px solid var(--border);
+  gap:10px;
 }
 .item-row:last-child{border-bottom:none;}
+.item-move{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.item-move button{
+  width:26px;
+  height:22px;
+  border:1px solid var(--border);
+  background:#FBFCFE;
+  color:var(--muted);
+  border-radius:6px;
+  font-size:11px;
+  line-height:1;
+  cursor:pointer;
+}
+.item-move button:disabled{
+  opacity:.35;
+  cursor:default;
+}
+.item-location{
+  display:inline-block;
+  font-size:11px;
+  font-weight:700;
+  color:var(--blue);
+  background:var(--blue-soft);
+  padding:2px 7px;
+  border-radius:6px;
+  margin-bottom:4px;
+}
 .item-name{
   font-size:15px;
   font-weight:600;
@@ -357,6 +388,10 @@ header h1{
   <div class="sheet">
     <h2 id="itemSheetTitle">상품 추가</h2>
     <div class="field">
+      <label>위치</label>
+      <input type="text" id="itemLocationInput" placeholder="예) 매장 A구역, 창고 2층">
+    </div>
+    <div class="field">
       <label>분류</label>
       <select id="itemCatSelect"></select>
     </div>
@@ -466,6 +501,22 @@ function escapeHtml(str){
   return div.innerHTML;
 }
 
+async function moveItem(sortedList, itemId, direction){
+  const idx = sortedList.findIndex(i=>i.id === itemId);
+  const targetIdx = idx + direction;
+  if(targetIdx < 0 || targetIdx >= sortedList.length) return;
+
+  const current = sortedList[idx];
+  const target = sortedList[targetIdx];
+  const currentOrder = current.order !== undefined ? current.order : idx;
+  const targetOrder = target.order !== undefined ? target.order : targetIdx;
+
+  const batch = writeBatch(db);
+  batch.update(doc(db,'items', current.id), { order: targetOrder });
+  batch.update(doc(db,'items', target.id), { order: currentOrder });
+  await batch.commit();
+}
+
 function render(){
   const search = document.getElementById('searchInput').value.trim().toLowerCase();
   const listEl = document.getElementById('catList');
@@ -481,7 +532,12 @@ function render(){
       totalValue += (Number(it.qty)||0) * (Number(it.price)||0);
     });
 
-    const filteredItems = catItems.filter(it => !search || it.name.toLowerCase().includes(search));
+    const sortedCatItems = catItems.slice().sort((a,b)=>{
+      const oa = a.order !== undefined ? a.order : 0;
+      const ob = b.order !== undefined ? b.order : 0;
+      return oa - ob;
+    });
+    const filteredItems = sortedCatItems.filter(it => !search || it.name.toLowerCase().includes(search));
     if(search && filteredItems.length === 0) return;
 
     const isOpen = openState[cat.id] !== undefined ? openState[cat.id] : true;
@@ -527,16 +583,30 @@ function render(){
       empty.textContent = '등록된 상품이 없다';
       body.appendChild(empty);
     } else {
-      filteredItems.forEach(it=>{
+      filteredItems.forEach((it, idx)=>{
         const row = document.createElement('div');
         row.className = 'item-row';
+        const locationHtml = it.location ? `<div class="item-location">${escapeHtml(it.location)}</div>` : '';
         row.innerHTML = `
+          <div class="item-move">
+            <button type="button" data-action="up" ${idx===0 || search ? 'disabled' : ''}>▲</button>
+            <button type="button" data-action="down" ${idx===filteredItems.length-1 || search ? 'disabled' : ''}>▼</button>
+          </div>
           <div class="item-left">
+            ${locationHtml}
             <div class="item-name">${escapeHtml(it.name)}</div>
             <div class="item-meta">${Number(it.qty).toLocaleString('ko-KR')} ${escapeHtml(it.unit)}</div>
           </div>
           <div class="item-price">${formatWon(it.price)}</div>
         `;
+        row.querySelector('[data-action="up"]').addEventListener('click', (e)=>{
+          e.stopPropagation();
+          moveItem(sortedCatItems, it.id, -1);
+        });
+        row.querySelector('[data-action="down"]').addEventListener('click', (e)=>{
+          e.stopPropagation();
+          moveItem(sortedCatItems, it.id, 1);
+        });
         row.addEventListener('click', ()=> openItemSheet(cat.id, it.id));
         body.appendChild(row);
       });
@@ -611,6 +681,7 @@ function openItemSheet(catId, itemId){
   if(itemId){
     const item = items.find(i=>i.id === itemId);
     document.getElementById('itemSheetTitle').textContent = '상품 수정';
+    document.getElementById('itemLocationInput').value = item.location || '';
     document.getElementById('itemNameInput').value = item.name;
     document.getElementById('itemQtyInput').value = item.qty;
     document.getElementById('itemPriceInput').value = item.price;
@@ -618,6 +689,7 @@ function openItemSheet(catId, itemId){
     document.getElementById('itemDeleteRow').classList.remove('hidden');
   } else {
     document.getElementById('itemSheetTitle').textContent = '상품 추가';
+    document.getElementById('itemLocationInput').value = '';
     document.getElementById('itemNameInput').value = '';
     document.getElementById('itemQtyInput').value = '';
     document.getElementById('itemPriceInput').value = '';
@@ -637,6 +709,7 @@ document.getElementById('itemCancelBtn').addEventListener('click', ()=> itemOver
 itemOverlay.addEventListener('click', (e)=>{ if(e.target === itemOverlay) itemOverlay.classList.remove('open'); });
 
 document.getElementById('itemSaveBtn').addEventListener('click', async ()=>{
+  const location = document.getElementById('itemLocationInput').value.trim();
   const name = document.getElementById('itemNameInput').value.trim();
   const qty = Number(document.getElementById('itemQtyInput').value);
   const price = Number(document.getElementById('itemPriceInput').value);
@@ -652,11 +725,13 @@ document.getElementById('itemSaveBtn').addEventListener('click', async ()=>{
   try{
     if(editingItemId){
       await updateDoc(doc(db,'items', editingItemId), {
-        name, unit:selectedUnit, qty, price, categoryId:catId
+        location, name, unit:selectedUnit, qty, price, categoryId:catId
       });
     } else {
+      const catItemCount = items.filter(i=>i.categoryId === catId).length;
       await addDoc(itemsCol, {
-        name, unit:selectedUnit, qty, price, categoryId:catId, createdAt: serverTimestamp()
+        location, name, unit:selectedUnit, qty, price, categoryId:catId,
+        order: catItemCount, createdAt: serverTimestamp()
       });
     }
     itemOverlay.classList.remove('open');
