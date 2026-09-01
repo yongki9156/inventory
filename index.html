@@ -619,6 +619,10 @@ header h1{
       <button class="btn-cancel" id="itemCancelBtn">취소</button>
       <button class="btn-save" id="itemSaveBtn">저장</button>
     </div>
+    <div class="sheet-btns hidden" id="itemMoveRow" style="gap:8px;">
+      <select id="itemQuickMoveSelect" style="flex:1;padding:12px 10px;border-radius:10px;border:1px solid var(--border);font-size:14px;background:#FBFCFE;"></select>
+      <button class="btn-block" id="itemQuickMoveBtn" style="flex:0 0 auto;padding:12px 16px;">이 상품만 이동</button>
+    </div>
     <div class="sheet-btns hidden" id="itemDeleteRow">
       <button class="btn-delete" id="itemDeleteBtn" style="width:100%">이 상품 삭제</button>
     </div>
@@ -1075,7 +1079,24 @@ function openItemSheet(catId, itemId){
     document.getElementById('itemPriceInput').value = item.price;
     setUnitSelection(item.unit);
     document.getElementById('itemDeleteRow').classList.remove('hidden');
+
+    const moveRow = document.getElementById('itemMoveRow');
+    const otherCats = categories.filter(c=>c.id !== catId);
+    if(otherCats.length > 0){
+      const moveSel = document.getElementById('itemQuickMoveSelect');
+      moveSel.innerHTML = '';
+      otherCats.forEach(c=>{
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        moveSel.appendChild(opt);
+      });
+      moveRow.classList.remove('hidden');
+    } else {
+      moveRow.classList.add('hidden');
+    }
   } else {
+    document.getElementById('itemMoveRow').classList.add('hidden');
     document.getElementById('itemSheetTitle').textContent = '상품 추가';
     document.getElementById('itemLocationInput').value = '';
     document.getElementById('itemNameInput').value = '';
@@ -1158,6 +1179,20 @@ document.getElementById('itemSaveBtn').addEventListener('click', async ()=>{
   } finally {
     saveBtn.disabled = false;
   }
+});
+
+document.getElementById('itemQuickMoveBtn').addEventListener('click', async ()=>{
+  const targetId = document.getElementById('itemQuickMoveSelect').value;
+  const item = items.find(i=>i.id === editingItemId);
+  if(!item || !targetId) return;
+
+  const targetCat = categories.find(c=>c.id === targetId);
+  const oldCat = categories.find(c=>c.id === item.categoryId);
+
+  await updateDoc(doc(db,'items', editingItemId), { categoryId: targetId, order: deleteField() });
+  addLog(`[상품 이동] "${item.name}" : "${oldCat ? oldCat.name : '알수없음'}" → "${targetCat.name}"`);
+
+  itemOverlay.classList.remove('open');
 });
 
 document.getElementById('itemDeleteBtn').addEventListener('click', async ()=>{
