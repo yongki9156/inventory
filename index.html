@@ -692,11 +692,26 @@ header h1{
   </div>
 </div>
 
+<!-- 분류 상품 전체 이동 -->
+<div class="overlay" id="moveCatOverlay">
+  <div class="sheet">
+    <h2 id="moveCatTitle">상품 전체 이동</h2>
+    <div class="field">
+      <label>이동할 분류</label>
+      <select id="moveCatTargetSelect"></select>
+    </div>
+    <div class="sheet-btns">
+      <button class="btn-cancel" id="moveCatCancelBtn">취소</button>
+      <button class="btn-save" id="moveCatConfirmBtn">이동</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
   getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
-  onSnapshot, query, orderBy, limitToLast, writeBatch,
+  onSnapshot, query, orderBy, limitToLast, writeBatch, deleteField,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
@@ -892,7 +907,7 @@ function render(){
     const filteredItems = sortedCatItems.filter(it => !search || it.name.toLowerCase().includes(search));
     if(search && filteredItems.length === 0) return;
 
-    const isOpen = openState[cat.id] !== undefined ? openState[cat.id] : true;
+    const isOpen = openState[cat.id] !== undefined ? openState[cat.id] : false;
 
     const card = document.createElement('div');
     card.className = 'cat-card';
@@ -909,12 +924,13 @@ function render(){
           <button type="button" data-action="catup" ${catIdx===0 || search ? 'disabled' : ''}>▲</button>
           <button type="button" data-action="catdown" ${catIdx===sortedCategories.length-1 || search ? 'disabled' : ''}>▼</button>
         </div>
+        <button class="icon-btn" data-action="movecat" data-id="${cat.id}">이동</button>
         <button class="icon-btn" data-action="delcat" data-id="${cat.id}">삭제</button>
         <span class="chev ${isOpen?'open':''}">▾</span>
       </div>
     `;
     head.addEventListener('click', (e)=>{
-      if(e.target.dataset.action === 'delcat' || e.target.dataset.action === 'catup' || e.target.dataset.action === 'catdown') return;
+      if(e.target.dataset.action === 'delcat' || e.target.dataset.action === 'catup' || e.target.dataset.action === 'catdown' || e.target.dataset.action === 'movecat') return;
       openState[cat.id] = !isOpen;
       render();
     });
@@ -926,6 +942,11 @@ function render(){
     head.querySelector('[data-action="catdown"]').addEventListener('click', (e)=>{
       e.stopPropagation();
       moveCategory(sortedCategories, cat.id, 1);
+    });
+
+    head.querySelector('[data-action="movecat"]').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      openMoveCatSheet(cat.id, catItems.length);
     });
 
     head.querySelector('[data-action="delcat"]').addEventListener('click', async (e)=>{
@@ -1306,6 +1327,65 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     bulkOverlay.classList.remove('open');
   } finally {
     saveBtn.disabled = false;
+  }
+});
+
+// 분류 상품 전체 이동
+const moveCatOverlay = document.getElementById('moveCatOverlay');
+let moveCatSourceId = null;
+
+function openMoveCatSheet(catId, itemCount){
+  if(itemCount === 0){
+    alert('이 분류에는 옮길 상품이 없어요');
+    return;
+  }
+  if(categories.length < 2){
+    alert('이동할 다른 분류가 없어요. 먼저 새 분류를 만들어주세요');
+    return;
+  }
+  moveCatSourceId = catId;
+  const sourceCat = categories.find(c=>c.id === catId);
+  document.getElementById('moveCatTitle').textContent = `"${sourceCat.name}" 상품 전체 이동 (${itemCount}개)`;
+
+  const sel = document.getElementById('moveCatTargetSelect');
+  sel.innerHTML = '';
+  categories.filter(c=>c.id !== catId).forEach(c=>{
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    sel.appendChild(opt);
+  });
+
+  moveCatOverlay.classList.add('open');
+}
+
+document.getElementById('moveCatCancelBtn').addEventListener('click', ()=> moveCatOverlay.classList.remove('open'));
+moveCatOverlay.addEventListener('click', (e)=>{ if(e.target === moveCatOverlay) moveCatOverlay.classList.remove('open'); });
+
+document.getElementById('moveCatConfirmBtn').addEventListener('click', async ()=>{
+  const targetId = document.getElementById('moveCatTargetSelect').value;
+  const sourceCat = categories.find(c=>c.id === moveCatSourceId);
+  const targetCat = categories.find(c=>c.id === targetId);
+  const movingItems = items.filter(i=>i.categoryId === moveCatSourceId);
+
+  if(!confirm(`"${sourceCat.name}"에 있는 상품 ${movingItems.length}개를 "${targetCat.name}"로 옮길까요`)) return;
+
+  const confirmBtn = document.getElementById('moveCatConfirmBtn');
+  confirmBtn.disabled = true;
+
+  try{
+    const batch = writeBatch(db);
+    movingItems.forEach(it=>{
+      batch.update(doc(db,'items', it.id), { categoryId: targetId, order: deleteField() });
+    });
+    await batch.commit();
+
+    const nameList = movingItems.map(i=>i.name).join(', ');
+    addLog(`[분류 이동] "${sourceCat.name}"의 상품 ${movingItems.length}개를 "${targetCat.name}"로 이동함: ${nameList}`);
+
+    moveCatOverlay.classList.remove('open');
+  } finally {
+    confirmBtn.disabled = false;
   }
 });
 
