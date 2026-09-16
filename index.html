@@ -412,8 +412,8 @@ header h1{
 
 .bulk-open-btn{
   display:block;
-  width:calc(100% - 32px);
-  margin:10px 16px 0;
+  width:calc(100% - 24px);
+  margin:10px 12px 0;
   padding:12px;
   border-radius:12px;
   border:1.5px dashed var(--blue);
@@ -421,6 +421,23 @@ header h1{
   color:var(--blue);
   font-weight:700;
   font-size:13.5px;
+  cursor:pointer;
+}
+
+.excel-btn-row{
+  display:flex;
+  gap:8px;
+  margin:8px 12px 0;
+}
+.excel-btn{
+  flex:1;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:var(--card);
+  color:var(--navy);
+  font-weight:700;
+  font-size:12.5px;
   cursor:pointer;
 }
 
@@ -549,6 +566,11 @@ header h1{
 <div class="search-wrap">
   <input type="text" id="searchInput" placeholder="제품명으로 검색">
   <button class="bulk-open-btn" id="btnBulkAdd">+ 여러 상품 한번에 등록 (엑셀 스타일)</button>
+  <div class="excel-btn-row">
+    <button class="excel-btn" id="btnExcelDownload">엑셀로 전체 다운로드</button>
+    <button class="excel-btn" id="btnExcelUpload">엑셀 업로드로 수정</button>
+  </div>
+  <input type="file" id="excelUploadInput" accept=".xlsx,.xls,.csv" class="hidden">
 </div>
 
 <div class="container" id="catList"></div>
@@ -711,6 +733,7 @@ header h1{
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
@@ -1421,6 +1444,116 @@ document.getElementById('moveCatConfirmBtn').addEventListener('click', async ()=
     moveCatOverlay.classList.remove('open');
   } finally {
     confirmBtn.disabled = false;
+  }
+});
+
+// 엑셀 다운로드
+document.getElementById('btnExcelDownload').addEventListener('click', ()=>{
+  if(items.length === 0){ alert('등록된 상품이 없어요'); return; }
+
+  const rows = items.map(it=>{
+    const catName = (categories.find(c=>c.id===it.categoryId) || {}).name || '';
+    return {
+      '분류': catName,
+      '위치': it.location || '',
+      '제품명': it.name,
+      '수량단위': it.unit,
+      '수량': it.qty,
+      '가격': it.price,
+      'ID(수정용, 건드리지 마세요)': it.id
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '재고목록');
+  const dateStr = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `새로고침_재고_${dateStr}.xlsx`);
+});
+
+// 엑셀 업로드로 일괄 수정
+document.getElementById('btnExcelUpload').addEventListener('click', ()=>{
+  document.getElementById('excelUploadInput').click();
+});
+
+document.getElementById('excelUploadInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+
+  if(!confirm('엑셀 내용대로 재고 정보를 수정, 추가할까요. ID가 있는 행은 수정되고 ID가 없는 새 행은 새 상품으로 추가돼요')){
+    e.target.value = '';
+    return;
+  }
+
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type:'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval:'' });
+
+    if(rows.length === 0){ alert('엑셀에 내용이 없어요'); e.target.value=''; return; }
+
+    const catNameToId = {};
+    categories.forEach(c=> catNameToId[c.name] = c.id);
+
+    const neededCatNames = [...new Set(rows.map(r=> String(r['분류']||'').trim()).filter(Boolean))];
+    let catOrderCursor = categories.length;
+    for(const name of neededCatNames){
+      if(!catNameToId[name]){
+        const ref = await addDoc(categoriesCol, { name, order: catOrderCursor, createdAt: serverTimestamp() });
+        catNameToId[name] = ref.id;
+        catOrderCursor += 1;
+      }
+    }
+
+    const validUnits = ['개','롤','박스','묶음'];
+    const workingItemsByCat = {};
+    const batch = writeBatch(db);
+    let updateCount = 0;
+    let addCount = 0;
+    let skipCount = 0;
+
+    rows.forEach(r=>{
+      const name = String(r['제품명']||'').trim();
+      if(!name){ skipCount++; return; }
+
+      const catName = String(r['분류']||'').trim();
+      const catId = catNameToId[catName] || categories[0]?.id;
+      if(!catId){ skipCount++; return; }
+
+      const location = String(r['위치']||'').trim();
+      const unitRaw = String(r['수량단위']||'개').trim();
+      const unit = validUnits.includes(unitRaw) ? unitRaw : '개';
+      const qty = Number(r['수량']) || 0;
+      const price = Number(r['가격']) || 0;
+      const idKey = Object.keys(r).find(k=>k.startsWith('ID'));
+      const id = idKey ? String(r[idKey]||'').trim() : '';
+
+      const existing = id ? items.find(i=>i.id === id) : null;
+
+      if(existing){
+        batch.update(doc(db,'items', existing.id), { location, name, unit, qty, price, categoryId: catId });
+        updateCount++;
+      } else {
+        if(!workingItemsByCat[catId]) workingItemsByCat[catId] = items.filter(i=>i.categoryId===catId).slice();
+        const insertOrder = computeInsertOrder(workingItemsByCat[catId], name);
+        const ref = doc(itemsCol);
+        const payload = { location, name, unit, qty, price, categoryId: catId, createdAt: serverTimestamp() };
+        if(insertOrder !== undefined) payload.order = insertOrder;
+        batch.set(ref, payload);
+        workingItemsByCat[catId].push({ name, order: insertOrder });
+        addCount++;
+      }
+    });
+
+    await batch.commit();
+    addLog(`[엑셀 업로드] 수정 ${updateCount}건, 신규 ${addCount}건 반영됨${skipCount>0 ? ` (제품명 없는 행 ${skipCount}개 제외)` : ''}`);
+    alert(`반영 완료. 수정 ${updateCount}건, 신규 추가 ${addCount}건`);
+  } catch(err){
+    console.error(err);
+    alert('엑셀 파일을 읽는 중 문제가 생겼어요. 다운로드한 형식 그대로 수정했는지 확인해주세요');
+  } finally {
+    e.target.value = '';
   }
 });
 
