@@ -1451,18 +1451,28 @@ document.getElementById('moveCatConfirmBtn').addEventListener('click', async ()=
 document.getElementById('btnExcelDownload').addEventListener('click', ()=>{
   if(items.length === 0){ alert('등록된 상품이 없어요'); return; }
 
-  const rows = items.map(it=>{
-    const catName = (categories.find(c=>c.id===it.categoryId) || {}).name || '';
-    return {
-      '분류': catName,
-      '위치': it.location || '',
-      '제품명': it.name,
-      '수량단위': it.unit,
-      '수량': it.qty,
-      '가격': it.price,
-      'ID(수정용, 건드리지 마세요)': it.id
-    };
+  const withCatName = items.map(it=>({
+    it,
+    catName: (categories.find(c=>c.id===it.categoryId) || {}).name || ''
+  }));
+
+  withCatName.sort((a,b)=>{
+    const catCompare = a.catName.localeCompare(b.catName, 'ko');
+    if(catCompare !== 0) return catCompare;
+    const locCompare = (a.it.location||'').localeCompare(b.it.location||'', 'ko');
+    if(locCompare !== 0) return locCompare;
+    return a.it.name.localeCompare(b.it.name, 'ko');
   });
+
+  const rows = withCatName.map(({it, catName})=>({
+    '분류': catName,
+    '위치': it.location || '',
+    '제품명': it.name,
+    '수량단위': it.unit,
+    '수량': it.qty,
+    '가격': it.price,
+    'ID(수정용, 건드리지 마세요)': it.id
+  }));
 
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
@@ -1532,8 +1542,18 @@ document.getElementById('excelUploadInput').addEventListener('change', async (e)
       const existing = id ? items.find(i=>i.id === id) : null;
 
       if(existing){
-        batch.update(doc(db,'items', existing.id), { location, name, unit, qty, price, categoryId: catId });
-        updateCount++;
+        const changed = (
+          (existing.location||'') !== location ||
+          existing.name !== name ||
+          existing.unit !== unit ||
+          Number(existing.qty) !== qty ||
+          Number(existing.price) !== price ||
+          existing.categoryId !== catId
+        );
+        if(changed){
+          batch.update(doc(db,'items', existing.id), { location, name, unit, qty, price, categoryId: catId });
+          updateCount++;
+        }
       } else {
         if(!workingItemsByCat[catId]) workingItemsByCat[catId] = items.filter(i=>i.categoryId===catId).slice();
         const insertOrder = computeInsertOrder(workingItemsByCat[catId], name);
