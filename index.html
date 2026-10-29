@@ -761,7 +761,7 @@ header h1{
     </div>
     <div class="field">
       <label>수량</label>
-      <input type="number" id="itemQtyInput" placeholder="예) 350" inputmode="numeric">
+      <input type="number" id="itemQtyInput" placeholder="예) 4.6" inputmode="decimal" step="any">
     </div>
     <div class="field">
       <label>가격 (원)</label>
@@ -811,7 +811,7 @@ header h1{
       </div>
       <div class="field">
         <label>공통 수량</label>
-        <input type="number" id="bulkQtyInput" placeholder="예) 350" inputmode="numeric">
+        <input type="number" id="bulkQtyInput" placeholder="예) 4.6" inputmode="decimal" step="any">
       </div>
       <div class="field">
         <label>공통 가격</label>
@@ -1023,7 +1023,15 @@ function renderLogs(){
 }
 
 function formatWon(n){
-  return Number(n||0).toLocaleString('ko-KR') + '원';
+  return Math.round(Number(n||0)).toLocaleString('ko-KR') + '원';
+}
+
+// 수량은 소수점 둘째 자리까지 표시 (예: 4.6박스, 2.25롤)
+function roundQty(n){
+  return Math.round(Number(n||0) * 100) / 100;
+}
+function formatQty(n){
+  return roundQty(n).toLocaleString('ko-KR', { maximumFractionDigits: 2 });
 }
 
 function escapeHtml(str){
@@ -1211,7 +1219,7 @@ function render(){
             <div class="item-name">${escapeHtml(it.name)}</div>
             <div class="item-meta">${formatWon(it.price)}</div>
           </div>
-          <div class="item-qty-big">${Number(it.qty).toLocaleString('ko-KR')}${escapeHtml(it.unit)}</div>
+          <div class="item-qty-big">${formatQty(it.qty)}${escapeHtml(it.unit)}</div>
         `;
         row.querySelector('[data-action="up"]').addEventListener('click', (e)=>{
           e.stopPropagation();
@@ -1347,12 +1355,12 @@ itemOverlay.addEventListener('click', (e)=>{ if(e.target === itemOverlay) itemOv
 document.getElementById('itemSaveBtn').addEventListener('click', async ()=>{
   const location = document.getElementById('itemLocationInput').value.trim();
   const name = document.getElementById('itemNameInput').value.trim();
-  const qty = Number(document.getElementById('itemQtyInput').value);
+  const qty = roundQty(document.getElementById('itemQtyInput').value);
   const price = Number(document.getElementById('itemPriceInput').value);
   const catId = document.getElementById('itemCatSelect').value;
 
   if(!name){ alert('제품명을 입력해라'); return; }
-  if(!qty && qty !== 0){ alert('수량을 입력해라'); return; }
+  if(document.getElementById('itemQtyInput').value.trim() === '' || isNaN(qty)){ alert('수량을 입력해주세요'); return; }
   if(!price && price !== 0){ alert('가격을 입력해라'); return; }
 
   const saveBtn = document.getElementById('itemSaveBtn');
@@ -1375,7 +1383,7 @@ document.getElementById('itemSaveBtn').addEventListener('click', async ()=>{
         diffParts.push(`제품명 "${oldItem.name}" → "${name}"`);
       }
       if(Number(oldItem.qty) !== qty || oldItem.unit !== selectedUnit){
-        diffParts.push(`수량 ${Number(oldItem.qty||0).toLocaleString('ko-KR')}${oldItem.unit||''} → ${qty.toLocaleString('ko-KR')}${selectedUnit}`);
+        diffParts.push(`수량 ${formatQty(oldItem.qty)}${oldItem.unit||''} → ${formatQty(qty)}${selectedUnit}`);
       }
       if(Number(oldItem.price) !== price){
         diffParts.push(`가격 ${formatWon(oldItem.price)} → ${formatWon(price)}`);
@@ -1400,7 +1408,7 @@ document.getElementById('itemSaveBtn').addEventListener('click', async ()=>{
       if(insertOrder !== undefined) newPayload.order = insertOrder;
       await addDoc(itemsCol, newPayload);
       const locPart = location ? ` · 위치 ${location}` : '';
-      addLog(`[상품 추가] "${name}" (${catName} · ${qty.toLocaleString('ko-KR')}${selectedUnit} · ${formatWon(price)}${locPart})`);
+      addLog(`[상품 추가] "${name}" (${catName} · ${formatQty(qty)}${selectedUnit} · ${formatWon(price)}${locPart})`);
     }
     itemOverlay.classList.remove('open');
   } finally {
@@ -1428,7 +1436,7 @@ document.getElementById('itemDeleteBtn').addEventListener('click', async ()=>{
   await deleteDoc(doc(db,'items', editingItemId));
   if(item){
     const catName = (categories.find(c=>c.id===item.categoryId) || {}).name || '';
-    addLog(`[상품 삭제] "${item.name}" (${catName} · ${Number(item.qty||0).toLocaleString('ko-KR')}${item.unit||''} · ${formatWon(item.price)})`);
+    addLog(`[상품 삭제] "${item.name}" (${catName} · ${formatQty(item.qty)}${item.unit||''} · ${formatWon(item.price)})`);
   }
   itemOverlay.classList.remove('open');
 });
@@ -1569,7 +1577,7 @@ function bulkAddRow(data){
       <option value="박스">박스</option>
       <option value="묶음">묶음</option>
     </select>
-    <input type="number" class="b-qty" inputmode="numeric" value="${data.qty!==undefined && data.qty!=='' ? data.qty : ''}">
+    <input type="number" class="b-qty" inputmode="decimal" step="any" value="${data.qty!==undefined && data.qty!=='' ? data.qty : ''}">
     <input type="number" class="b-price" inputmode="numeric" value="${data.price!==undefined && data.price!=='' ? data.price : ''}">
     <button type="button" class="row-del">×</button>
   `;
@@ -1650,7 +1658,7 @@ document.getElementById('bulkSaveBtn').addEventListener('click', async ()=>{
     const name = row.querySelector('.b-name').value.trim();
     const location = row.querySelector('.b-loc').value.trim();
     const unit = row.querySelector('.b-unit').value;
-    const qty = Number(row.querySelector('.b-qty').value);
+    const qty = roundQty(row.querySelector('.b-qty').value);
     const price = Number(row.querySelector('.b-price').value);
 
     if(!name && !row.querySelector('.b-qty').value && !row.querySelector('.b-price').value) return;
@@ -1846,7 +1854,7 @@ document.getElementById('excelUploadInput').addEventListener('change', async (e)
       const location = String(r['위치']||'').trim();
       const unitRaw = String(r['수량단위']||'개').trim();
       const unit = validUnits.includes(unitRaw) ? unitRaw : '개';
-      const qty = Number(r['수량']) || 0;
+      const qty = roundQty(r['수량']) || 0;
       const price = Number(r['가격']) || 0;
       const idKey = Object.keys(r).find(k=>k.startsWith('ID'));
       const id = idKey ? String(r[idKey]||'').trim() : '';
