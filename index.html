@@ -55,6 +55,39 @@ header h1{
   margin-top:3px;
   font-weight:700;
 }
+.header-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:3px;
+}
+.header-top h1{margin-top:0;}
+.user-chip{
+  flex:0 0 auto;
+  max-width:55%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  border:none;
+  background:var(--navy-light);
+  color:#fff;
+  font-size:11.5px;
+  font-weight:700;
+  padding:6px 10px;
+  border-radius:20px;
+  cursor:pointer;
+}
+.user-chip.empty{
+  background:#F5A623;
+  color:var(--navy);
+}
+.name-hint{
+  font-size:12.5px;
+  color:var(--muted);
+  line-height:1.6;
+  margin:-6px 0 14px;
+}
 .summary-row{
   display:flex;
   gap:8px;
@@ -72,6 +105,9 @@ header h1{
 .search-wrap{
   padding:12px 12px 0;
 }
+.search-box{
+  position:relative;
+}
 .search-wrap input{
   width:100%;
   padding:9px 12px;
@@ -82,6 +118,78 @@ header h1{
   outline:none;
 }
 .search-wrap input:focus{border-color:var(--blue);}
+
+.search-history{
+  position:absolute;
+  top:calc(100% + 4px);
+  left:0;
+  right:0;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:10px;
+  box-shadow:0 8px 20px rgba(15,20,35,.12);
+  z-index:40;
+  max-height:280px;
+  overflow-y:auto;
+  display:none;
+}
+.search-history.open{display:block;}
+.sh-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:8px 12px;
+  font-size:11.5px;
+  color:var(--muted);
+  font-weight:700;
+  border-bottom:1px solid var(--border);
+  position:sticky;
+  top:0;
+  background:var(--card);
+}
+.sh-clear{
+  border:none;
+  background:none;
+  color:var(--muted);
+  font-size:11.5px;
+  font-weight:600;
+  cursor:pointer;
+  padding:2px 4px;
+}
+.sh-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:10px 12px;
+  font-size:13.5px;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+}
+.sh-item:last-child{border-bottom:none;}
+.sh-item:active{background:var(--bg);}
+.sh-term{
+  flex:1;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.sh-del{
+  border:none;
+  background:none;
+  color:var(--muted);
+  font-size:17px;
+  line-height:1;
+  padding:2px 6px;
+  cursor:pointer;
+}
+.sh-empty{
+  padding:14px 12px;
+  text-align:center;
+  color:var(--muted);
+  font-size:12.5px;
+}
 
 .container{padding:12px;}
 
@@ -550,7 +658,10 @@ header h1{
 
 <header>
   <div class="brand"><span class="status-dot" id="statusDot"></span> SEROGOCHIM · 실시간 동기화</div>
-  <h1>새로고침 재고관리</h1>
+  <div class="header-top">
+    <h1>새로고침 재고관리</h1>
+    <button type="button" class="user-chip empty" id="userChip">이름 정하기</button>
+  </div>
   <div class="summary-row">
     <div class="summary-box">
       <div class="label">전체 품목</div>
@@ -564,7 +675,10 @@ header h1{
 </header>
 
 <div class="search-wrap">
-  <input type="text" id="searchInput" placeholder="제품명으로 검색">
+  <div class="search-box" id="searchBox">
+    <input type="text" id="searchInput" placeholder="제품명으로 검색" autocomplete="off" enterkeyhint="search">
+    <div class="search-history" id="searchHistory"></div>
+  </div>
   <button class="bulk-open-btn" id="btnBulkAdd">+ 여러 상품 한번에 등록 (엑셀 스타일)</button>
   <div class="excel-btn-row">
     <button class="excel-btn" id="btnExcelDownload">엑셀로 전체 다운로드</button>
@@ -587,6 +701,22 @@ header h1{
   <button class="fab primary" id="btnAddItemGlobal">+ 상품 추가</button>
 </div>
 
+</div>
+
+<!-- 사용자 이름 설정 시트 -->
+<div class="overlay" id="nameOverlay">
+  <div class="sheet">
+    <h2 id="nameSheetTitle">사용할 이름 정하기</h2>
+    <div class="name-hint">이 폰에 한 번만 정해두면 계속 이 이름으로 변경기록이 남아요. 이름을 정해야 재고 수정이 가능해요</div>
+    <div class="field">
+      <label>이름</label>
+      <input type="text" id="nameInput" placeholder="예) 사원1" maxlength="12" autocomplete="off" enterkeyhint="done">
+    </div>
+    <div class="sheet-btns">
+      <button class="btn-cancel" id="nameCancelBtn">보기만 할게요</button>
+      <button class="btn-save" id="nameSaveBtn">저장</button>
+    </div>
+  </div>
 </div>
 
 <!-- 분류 추가 시트 -->
@@ -783,9 +913,74 @@ let editingItemId = null;
 let editingItemCatId = null;
 let selectedUnit = '개';
 
+// 사용자 이름 (폰마다 따로 저장됨)
+const USER_KEY = 'serogochim_user_name';
+const nameOverlay = document.getElementById('nameOverlay');
+const nameInput = document.getElementById('nameInput');
+const userChip = document.getElementById('userChip');
+
+function loadUserName(){
+  try{ return (localStorage.getItem(USER_KEY) || '').trim(); }catch(e){ return ''; }
+}
+function storeUserName(n){
+  try{ localStorage.setItem(USER_KEY, n); return true; }catch(e){ return false; }
+}
+
+let userName = loadUserName();
+
+function updateUserChip(){
+  userChip.textContent = userName ? userName : '이름 정하기';
+  userChip.classList.toggle('empty', !userName);
+}
+
+function openNameSheet(){
+  document.getElementById('nameSheetTitle').textContent = userName ? '이름 변경' : '사용할 이름 정하기';
+  document.getElementById('nameCancelBtn').textContent = userName ? '취소' : '보기만 할게요';
+  nameInput.value = userName;
+  nameOverlay.classList.add('open');
+  setTimeout(()=> nameInput.focus(), 150);
+}
+
+function requireName(){
+  if(userName) return true;
+  alert('이름을 먼저 정해야 재고를 수정할 수 있어요');
+  openNameSheet();
+  return false;
+}
+
+async function saveUserName(){
+  const n = nameInput.value.trim();
+  if(!n){ alert('이름을 입력해주세요'); return; }
+  if(n.length > 12){ alert('이름은 12자 이내로 해주세요'); return; }
+
+  const oldName = userName;
+  if(!storeUserName(n)){
+    alert('이 브라우저에서는 이름 저장이 안 돼요. 시크릿모드가 아닌 일반 창으로 접속해주세요');
+    return;
+  }
+  userName = n;
+  updateUserChip();
+  nameOverlay.classList.remove('open');
+
+  if(oldName && oldName !== n){
+    addLog(`[이름 변경] "${oldName}" → "${n}"`);
+  }
+}
+
+userChip.addEventListener('click', openNameSheet);
+document.getElementById('nameSaveBtn').addEventListener('click', saveUserName);
+document.getElementById('nameCancelBtn').addEventListener('click', ()=> nameOverlay.classList.remove('open'));
+nameOverlay.addEventListener('click', (e)=>{ if(e.target === nameOverlay) nameOverlay.classList.remove('open'); });
+nameInput.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){ e.preventDefault(); saveUserName(); }
+});
+
+updateUserChip();
+if(!userName) openNameSheet();
+
 async function addLog(message){
   try{
-    await addDoc(logsCol, { message, createdAt: serverTimestamp() });
+    await addDoc(logsCol, { message, author: userName || '이름없음', createdAt: serverTimestamp() });
   }catch(e){ console.error(e); }
 }
 
@@ -821,7 +1016,8 @@ function renderLogs(){
   listEl.innerHTML = logs.map(l=>{
     const t = l.createdAt && l.createdAt.toDate ? l.createdAt.toDate() : null;
     const timeStr = t ? t.toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '전송중';
-    return `<div class="log-item">${escapeHtml(l.message||'')}<span class="log-time">${timeStr}</span></div>`;
+    const authorHtml = l.author ? `<span class="log-author">${escapeHtml(l.author)}</span>` : '';
+    return `<div class="log-item">${authorHtml}${escapeHtml(l.message||'')}<span class="log-time">${timeStr}</span></div>`;
   }).join('');
   listEl.scrollTop = listEl.scrollHeight;
 }
@@ -964,20 +1160,24 @@ function render(){
 
     head.querySelector('[data-action="catup"]').addEventListener('click', (e)=>{
       e.stopPropagation();
+      if(!requireName()) return;
       moveCategory(sortedCategories, cat.id, -1);
     });
     head.querySelector('[data-action="catdown"]').addEventListener('click', (e)=>{
       e.stopPropagation();
+      if(!requireName()) return;
       moveCategory(sortedCategories, cat.id, 1);
     });
 
     head.querySelector('[data-action="movecat"]').addEventListener('click', (e)=>{
       e.stopPropagation();
+      if(!requireName()) return;
       openMoveCatSheet(cat.id, catItems.length);
     });
 
     head.querySelector('[data-action="delcat"]').addEventListener('click', async (e)=>{
       e.stopPropagation();
+      if(!requireName()) return;
       if(!confirm(cat.name + ' 분류를 삭제할까. 안의 상품도 함께 삭제된다')) return;
       const batch = writeBatch(db);
       items.filter(i=>i.categoryId === cat.id).forEach(i=>{
@@ -1015,10 +1215,12 @@ function render(){
         `;
         row.querySelector('[data-action="up"]').addEventListener('click', (e)=>{
           e.stopPropagation();
+          if(!requireName()) return;
           moveItem(sortedCatItems, it.id, -1);
         });
         row.querySelector('[data-action="down"]').addEventListener('click', (e)=>{
           e.stopPropagation();
+          if(!requireName()) return;
           moveItem(sortedCatItems, it.id, 1);
         });
         row.addEventListener('click', ()=> openItemSheet(cat.id, it.id));
@@ -1044,6 +1246,7 @@ function render(){
 // 분류 추가
 const catOverlay = document.getElementById('catOverlay');
 document.getElementById('btnAddCategory').addEventListener('click', ()=>{
+  if(!requireName()) return;
   document.getElementById('catNameInput').value = '';
   catOverlay.classList.add('open');
 });
@@ -1084,6 +1287,7 @@ document.querySelectorAll('.unit-opt').forEach(el=>{
 });
 
 function openItemSheet(catId, itemId){
+  if(!requireName()) return;
   if(categories.length === 0){
     alert('먼저 분류를 추가해라');
     return;
@@ -1229,7 +1433,113 @@ document.getElementById('itemDeleteBtn').addEventListener('click', async ()=>{
   itemOverlay.classList.remove('open');
 });
 
-document.getElementById('searchInput').addEventListener('input', render);
+// 검색 + 검색기록 (기기마다 따로 저장됨)
+const searchInput = document.getElementById('searchInput');
+const searchBox = document.getElementById('searchBox');
+const historyEl = document.getElementById('searchHistory');
+const HISTORY_KEY = 'serogochim_search_history';
+const HISTORY_MAX = 20;
+let shownHistory = [];
+
+function loadHistory(){
+  try{
+    const v = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    return Array.isArray(v) ? v : [];
+  }catch(e){ return []; }
+}
+function saveHistory(list){
+  try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); }catch(e){}
+}
+function addHistory(term){
+  term = (term || '').trim();
+  if(!term) return;
+  let list = loadHistory().filter(t=>t !== term);
+  list.unshift(term);
+  if(list.length > HISTORY_MAX) list = list.slice(0, HISTORY_MAX);
+  saveHistory(list);
+}
+function removeHistory(term){
+  saveHistory(loadHistory().filter(t=>t !== term));
+}
+
+function hideHistory(){
+  historyEl.classList.remove('open');
+}
+
+function renderHistory(){
+  const kw = searchInput.value.trim().toLowerCase();
+  let list = loadHistory();
+  if(kw) list = list.filter(t=>t.toLowerCase().includes(kw) && t.toLowerCase() !== kw);
+  shownHistory = list;
+
+  if(list.length === 0){
+    if(kw){ hideHistory(); return; }
+    historyEl.innerHTML = '<div class="sh-empty">검색 기록이 없어요</div>';
+  } else {
+    historyEl.innerHTML =
+      `<div class="sh-head"><span>최근 검색</span><button type="button" class="sh-clear" data-act="clear">전체 삭제</button></div>` +
+      list.map((t, i)=>`
+        <div class="sh-item" data-act="pick" data-idx="${i}">
+          <span class="sh-term">${escapeHtml(t)}</span>
+          <button type="button" class="sh-del" data-act="del" data-idx="${i}">×</button>
+        </div>`).join('');
+  }
+  historyEl.classList.add('open');
+}
+
+function runSearch(term){
+  searchInput.value = term;
+  addHistory(term);
+  render();
+  hideHistory();
+  searchInput.blur();
+}
+
+searchInput.addEventListener('focus', renderHistory);
+searchInput.addEventListener('input', ()=>{
+  render();
+  renderHistory();
+});
+searchInput.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    runSearch(searchInput.value);
+  }
+});
+searchInput.addEventListener('blur', ()=>{
+  addHistory(searchInput.value);
+});
+
+// 기록 목록을 누를 때 검색칸 포커스가 풀리지 않게
+historyEl.addEventListener('mousedown', (e)=> e.preventDefault());
+
+historyEl.addEventListener('click', (e)=>{
+  const target = e.target.closest('[data-act]');
+  if(!target) return;
+  const act = target.dataset.act;
+
+  if(act === 'clear'){
+    if(!confirm('검색 기록을 전부 지울까요')) return;
+    saveHistory([]);
+    renderHistory();
+    return;
+  }
+  const term = shownHistory[Number(target.dataset.idx)];
+  if(term === undefined) return;
+
+  if(act === 'del'){
+    e.stopPropagation();
+    removeHistory(term);
+    renderHistory();
+  } else if(act === 'pick'){
+    runSearch(term);
+  }
+});
+
+// 검색칸 바깥을 누르면 기록창 닫기
+document.addEventListener('click', (e)=>{
+  if(!searchBox.contains(e.target)) hideHistory();
+});
 
 // 여러 상품 한번에 등록
 const bulkOverlay = document.getElementById('bulkOverlay');
@@ -1269,6 +1579,7 @@ function bulkAddRow(data){
 }
 
 document.getElementById('btnBulkAdd').addEventListener('click', ()=>{
+  if(!requireName()) return;
   if(categories.length === 0){
     alert('먼저 분류를 추가해주세요');
     return;
@@ -1483,6 +1794,7 @@ document.getElementById('btnExcelDownload').addEventListener('click', ()=>{
 
 // 엑셀 업로드로 일괄 수정
 document.getElementById('btnExcelUpload').addEventListener('click', ()=>{
+  if(!requireName()) return;
   document.getElementById('excelUploadInput').click();
 });
 
